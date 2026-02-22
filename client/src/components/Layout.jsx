@@ -8,17 +8,30 @@ const Layout = ({ role, children, customSidebarContent }) => {
   return (
     <div className={`flex min-h-screen font-sans ${role === 'NGO' ? 'bg-[#F8FAFC] selection:bg-indigo-100' : 'bg-[#F8FAFB] selection:bg-emerald-100'}`}>
       
+
+
+
       {/* Mobile Header: Fixed at Z-50 */}
       <div className="lg:hidden fixed top-0 w-full bg-white/90 backdrop-blur-md border-b border-slate-200 h-16 z-50 flex items-center justify-between px-6">
-        <div className="flex items-center gap-2">
+     
+
+        <div className="flex items-center gap-2" onClick={() => { navigate('/');}}>
           <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white ${role === 'NGO' ? 'bg-indigo-600' : 'bg-emerald-600'}`}>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 21l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
             </svg>
           </div>
-          <span className="text-sm font-black tracking-tighter uppercase">SurplusShare</span>
+          <span className="text-smfont-black tracking-tighter text-slate-900 uppercase">SURPLUS<span className="text-emerald-600">SHARE</span></span>
+       
+       
         </div>
         
+
+
+
+
+
+
         <button 
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
           className={`p-2.5 rounded-xl border transition-all active:scale-90 ${isSidebarOpen ? 'bg-slate-900 text-white border-slate-900' : 'bg-slate-50 text-slate-600 border-slate-200'}`}
