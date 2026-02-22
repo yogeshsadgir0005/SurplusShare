@@ -1,7 +1,9 @@
 import axios from 'axios';
 
+export const API_BASE_URL = 'https://surplusshare.onrender.com';
+
 const api = axios.create({
-  baseURL: 'https://surplusshare.onrender.com/api',
+  baseURL: `${API_BASE_URL}/api`,
   headers: {
     'Content-Type': 'application/json',
   },

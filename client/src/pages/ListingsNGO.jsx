@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../services/axios';
+import api,{API_BASE_URL} from '../services/axios';
 import Layout from '../components/Layout';
 
 const ListingsNGO = () => {
@@ -11,7 +11,6 @@ const ListingsNGO = () => {
   const [activeCategory, setActiveCategory] = useState('All');
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user'));
-  const API_BASE_URL = 'http://localhost:5000';
 
   useEffect(() => {
     const fetchPosts = async () => {

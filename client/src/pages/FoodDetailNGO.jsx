@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import api from '../services/axios';
+import api,{API_BASE_URL} from '../services/axios';
 import Layout from '../components/Layout';
 
 const FoodDetailNGO = () => {
@@ -10,7 +10,6 @@ const FoodDetailNGO = () => {
   const [resource, setResource] = useState(null);
   const [isSyncing, setIsSyncing] = useState(true);
   const [isClaiming, setIsClaiming] = useState(false);
-  const API_BASE_URL = 'http://localhost:5000';
 
   useEffect(() => {
     const fetchResource = async () => {
