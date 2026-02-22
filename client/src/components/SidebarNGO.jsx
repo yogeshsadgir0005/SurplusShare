@@ -25,12 +25,20 @@ const SidebarNGO = ({ customSidebarContent, closeSidebar }) => {
     );
   };
 
+    const HeroIcon = () => (
+    <svg className="w-full h-full" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 2L3 7V17L12 22L21 17V7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M12 22V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M21 7L12 12L3 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+  
   return (
     <aside className="flex flex-col h-full overflow-y-auto">
       <div className="p-8 flex items-center gap-3 cursor-pointer" onClick={() => { navigate('/'); if(closeSidebar) closeSidebar(); }}>
-        <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-xl shadow-indigo-100">
-          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 21l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-        </div>
+         <div className="w-10 h-10 lg:w-12 lg:h-12 bg-slate-900 text-white p-2 lg:p-2.5 rounded-2xl shadow-2xl group-hover:rotate-12 transition-transform duration-500">
+              <HeroIcon />
+            </div>
         <span className="text-xl font-black tracking-tighter text-slate-900 uppercase">SURPLUS<span className="text-indigo-600">SHARE</span></span>
       </div>
 
