@@ -4,14 +4,36 @@ import toast from 'react-hot-toast';
 import api from '../services/axios';
 import { useLocationAPI } from '../hooks/useLocationAPI';
 import Layout from '../components/Layout';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
 
-// Helper components moved outside to prevent focus loss during typing
+// Fix Leaflet marker icons
+const customIcon = new L.Icon({
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41]
+});
+
+// Component to handle map clicks and marker dragging
+const LocationPicker = ({ position, setPosition }) => {
+  useMapEvents({
+    click(e) { setPosition(e.latlng); },
+  });
+  return position ? (
+    <Marker position={position} icon={customIcon} draggable={true} eventHandlers={{ dragend: (e) => setPosition(e.target.getLatLng()) }} />
+  ) : null;
+};
+
+// Clean B2B Input Wrapper
 const InputWrapper = ({ label, children, icon }) => (
   <div className="space-y-1.5">
-    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1 flex items-center gap-1.5">
+    <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
       {icon && (
-        <svg className="w-3 h-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d={icon}/>
+        <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={icon}/>
         </svg>
       )}
       {label}
@@ -28,6 +50,15 @@ const PostFood = () => {
   const [imagePreview, setImagePreview] = useState(null);
   const [imageFile, setImageFile] = useState(null);
   const [sameAsProfile, setSameAsProfile] = useState(false);
+
+  // Default Map center (India), or user's saved location
+  const defaultPosition = (user?.supplierDetails?.lat && user?.supplierDetails?.lng) 
+    ? { lat: user.supplierDetails.lat, lng: user.supplierDetails.lng } 
+    : { lat: 20.5937, lng: 78.9629 };
+    
+  const [mapPosition, setMapPosition] = useState(
+    (user?.supplierDetails?.lat && user?.supplierDetails?.lng) ? defaultPosition : null
+  );
 
   const [formData, setFormData] = useState({
     type: 'OneTime', 
@@ -62,16 +93,9 @@ const PostFood = () => {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    if (name === 'state') {
-      setFormData(prev => ({ ...prev, state: value, district: '', city: '' }));
-    } else if (name === 'district') {
-      setFormData(prev => ({ ...prev, district: value, city: '' }));
-    } else {
-      setFormData(prev => ({ 
-        ...prev, 
-        [name]: type === 'checkbox' ? checked : (value === 'true' ? true : value === 'false' ? false : value) 
-      }));
-    }
+    if (name === 'state') setFormData(prev => ({ ...prev, state: value, district: '', city: '' }));
+    else if (name === 'district') setFormData(prev => ({ ...prev, district: value, city: '' }));
+    else setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : (value === 'true' ? true : value === 'false' ? false : value) }));
   };
 
   const handleImageChange = (e) => {
@@ -89,11 +113,7 @@ const PostFood = () => {
     const checked = e.target.checked;
     setSameAsProfile(checked);
     if (checked && user?.supplierDetails) {
-      setFormData(prev => ({ 
-        ...prev, 
-        contactName: user.supplierDetails.legalName || '', 
-        contactPhone: user.supplierDetails.contactNumber || '' 
-      }));
+      setFormData(prev => ({ ...prev, contactName: user.supplierDetails.legalName || '', contactPhone: user.supplierDetails.contactNumber || '' }));
     } else {
       setFormData(prev => ({ ...prev, contactName: '', contactPhone: '' }));
     }
@@ -102,11 +122,17 @@ const PostFood = () => {
   const executePost = async (e) => {
     e.preventDefault();
     if (!imageFile) return toast.error('Product verification photo required');
+    if (!mapPosition) return toast.error('Please click the map to pin the exact pickup location. (Required)');
+    
     setIsSubmitting(true);
     try {
       const submission = new FormData();
       Object.keys(formData).forEach(key => submission.append(key, formData[key]));
       submission.append('image', imageFile);
+      
+      submission.append('lat', mapPosition.lat);
+      submission.append('lng', mapPosition.lng);
+
       await api.post('/posts', submission, { headers: { 'Content-Type': 'multipart/form-data' } });
       toast.success('Surplus Released to Network');
       navigate('/supplier/dashboard');
@@ -119,23 +145,32 @@ const PostFood = () => {
 
   return (
     <Layout role="Supplier">
-      <div className="max-w-4xl mx-auto space-y-8 lg:space-y-12">
-        <header className="mb-10 lg:mb-16">
-          <div className="flex items-center gap-3 text-[10px] sm:text-sm font-black text-slate-400 uppercase tracking-widest mb-2">
-            <span>Food Post</span>
-            <div className="w-1.5 h-1.5 bg-slate-200 rounded-full"></div>
-            <span className="text-emerald-600">New Release</span>
+      <div className="max-w-6xl mx-auto space-y-8">
+        
+        {/* Sleek Header */}
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-5">
+          <div>
+            <div className="flex items-center gap-2 text-xs font-medium text-slate-500 mb-1">
+              <span className="cursor-pointer hover:text-emerald-600 transition-colors" onClick={() => navigate('/supplier/dashboard')}>Dashboard</span>
+              <span>/</span>
+              <span className="text-emerald-600">New Release</span>
+            </div>
+            <h1 className="text-2xl font-bold text-slate-900">Initialize Food Release</h1>
           </div>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tighter leading-none">Share Food Now</h2>
         </header>
 
-        <form onSubmit={executePost} className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
+        <form onSubmit={executePost} className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+          
           {/* Left Column: Form Fields */}
-          <div className="lg:col-span-7 space-y-8 lg:space-y-10">
-            <section className="bg-white rounded-[2.5rem] lg:rounded-[3rem] border border-slate-200 p-6 lg:p-10 shadow-sm space-y-6 lg:space-y-8">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <InputWrapper label="Food Category" icon="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4">
-                  <select name="category" value={formData.category} onChange={handleInputChange} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 appearance-none">
+          <div className="lg:col-span-2 space-y-6">
+            
+            {/* Logistics Configuration Card */}
+            <section className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-6">
+              <h3 className="text-lg font-semibold text-slate-900 mb-4 border-b border-slate-100 pb-3">Logistics Details</h3>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <InputWrapper label="Category" icon="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4">
+                  <select name="category" value={formData.category} onChange={handleInputChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors">
                     <option>Prepared Meals</option>
                     <option>Bakery/Grains</option>
                     <option>Produce</option>
@@ -143,143 +178,186 @@ const PostFood = () => {
                     <option>Meat/Protein</option>
                   </select>
                 </InputWrapper>
-                <InputWrapper label="Amount (Kg)" icon="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3">
-                  <input type="number" step="0.1" name="weight" required value={formData.weight} onChange={handleInputChange} placeholder="0.0" className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500"/>
+                <InputWrapper label="Total Volume (kg)" icon="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3">
+                  <input type="number" step="0.1" name="weight" required value={formData.weight} onChange={handleInputChange} placeholder="0.0" className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors placeholder:text-slate-400"/>
                 </InputWrapper>
               </div>
 
-              <div className="bg-slate-50 rounded-[2rem] p-6 border border-slate-100">
-                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Will you provide packaging?</h4>
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <label className={`flex-1 p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-center gap-3 ${formData.packaging === true ? 'bg-white border-emerald-500 shadow-lg' : 'bg-transparent border-slate-200 opacity-60'}`}>
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-5">
+                <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-3">Packaging Protocol</h4>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <label className={`flex-1 p-3 rounded-lg border cursor-pointer transition-all flex items-center gap-3 ${formData.packaging === true ? 'bg-emerald-50 border-emerald-500 text-emerald-800' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
                     <input type="radio" name="packaging" value="true" checked={formData.packaging === true} onChange={handleInputChange} className="hidden" />
-                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${formData.packaging === true ? 'border-emerald-500' : 'border-slate-300'}`}>
+                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${formData.packaging === true ? 'border-emerald-500' : 'border-slate-300'}`}>
                       {formData.packaging === true && <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>}
                     </div>
-                    <span className="text-xs font-black uppercase tracking-widest">Yes</span>
+                    <span className="text-sm font-semibold">YES</span>
                   </label>
-                  <label className={`flex-1 p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-center gap-3 ${formData.packaging === false ? 'bg-white border-emerald-500 shadow-lg' : 'bg-transparent border-slate-200 opacity-60'}`}>
+                  <label className={`flex-1 p-3 rounded-lg border cursor-pointer transition-all flex items-center gap-3 ${formData.packaging === false ? 'bg-emerald-50 border-emerald-500 text-emerald-800' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
                     <input type="radio" name="packaging" value="false" checked={formData.packaging === false} onChange={handleInputChange} className="hidden" />
-                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${formData.packaging === false ? 'border-emerald-500' : 'border-slate-300'}`}>
+                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${formData.packaging === false ? 'border-emerald-500' : 'border-slate-300'}`}>
                       {formData.packaging === false && <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>}
                     </div>
-                    <span className="text-xs font-black uppercase tracking-widest">No</span>
+                    <span className="text-sm font-semibold">NO</span>
                   </label>
                 </div>
               </div>
 
-              <InputWrapper label="Stays Fresh For" icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z">
-                 <input type="text" name="shelfLife" required value={formData.shelfLife} onChange={handleInputChange} placeholder="e.g. 4 Hours" className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500"/>
+              <InputWrapper label="Shelf Life / Freshness" icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z">
+                 <input type="text" name="shelfLife" required value={formData.shelfLife} onChange={handleInputChange} placeholder="e.g. Needs pickup within 4 hours" className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors placeholder:text-slate-400"/>
               </InputWrapper>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <InputWrapper label="Pickup Date" icon="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
-                  <input type="date" name="pickupDate" required value={formData.pickupDate} onChange={handleInputChange} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500"/>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 border-t border-slate-100 pt-5">
+                <InputWrapper label="Scheduled Date" icon="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                  <input type="date" name="pickupDate" required value={formData.pickupDate} onChange={handleInputChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
                 </InputWrapper>
-                <InputWrapper label="Pickup Time" icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z">
-                  <input type="time" name="pickupTime" required value={formData.pickupTime} onChange={handleInputChange} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500"/>
+                <InputWrapper label="Time Window" icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z">
+                  <input type="time" name="pickupTime" required value={formData.pickupTime} onChange={handleInputChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
                 </InputWrapper>
               </div>
             </section>
 
-            {/* Pickup Location Section */}
-            <section className="bg-white rounded-[2.5rem] lg:rounded-[3rem] border border-slate-200 p-6 lg:p-10 shadow-sm space-y-6 lg:space-y-8">
-               <h3 className="text-xl font-black text-slate-900 tracking-tight mb-2 uppercase">Pickup Location</h3>
+            {/* Location Section with Map */}
+            <section className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-6">
+               <h3 className="text-lg font-semibold text-slate-900 mb-4 border-b border-slate-100 pb-3">Pickup Location</h3>
+               
                <InputWrapper label="Street Address" icon="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z">
-                  <input type="text" name="pickupAddress" required value={formData.pickupAddress} onChange={handleInputChange} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500"/>
+                  <input type="text" name="pickupAddress" required value={formData.pickupAddress} onChange={handleInputChange} placeholder="Full building address..." className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors placeholder:text-slate-400"/>
                </InputWrapper>
                
-               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-50 border border-slate-100 p-6 rounded-[2rem]">
+               <div className="grid grid-cols-1 md:grid-cols-3 gap-5 bg-slate-50 border border-slate-200 p-5 rounded-lg">
                   <InputWrapper label="State">
-                     <select name="state" required value={formData.state} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-xs font-black outline-none appearance-none cursor-pointer focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500">
+                     <select name="state" required value={formData.state} onChange={handleInputChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors cursor-pointer">
                         <option value="">Select State</option>
                         {states.map(s => <option key={s.state} value={s.state}>{s.state}</option>)}
                      </select>
                   </InputWrapper>
                   <InputWrapper label="District">
-                     <select name="district" required value={formData.district} onChange={handleInputChange} disabled={!formData.state} className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-xs font-black outline-none appearance-none disabled:opacity-40 cursor-pointer focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500">
+                     <select name="district" required value={formData.district} onChange={handleInputChange} disabled={!formData.state} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none disabled:opacity-50 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors cursor-pointer">
                         <option value="">Select District</option>
                         {districts.map(d => <option key={d} value={d}>{d}</option>)}
                      </select>
                   </InputWrapper>
                   <InputWrapper label="City / Town">
-                     <input type="text" name="city" required value={formData.city} onChange={handleInputChange} placeholder="Specific city..." className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-xs font-black outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500"/>
+                     <input type="text" name="city" required value={formData.city} onChange={handleInputChange} placeholder="e.g. Pune" className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors placeholder:text-slate-400"/>
                   </InputWrapper>
+               </div>
+
+               {/* Map Pinning Utility */}
+               <div className="pt-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                      <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                      Pin Exact Location
+                    </label>
+                    {!mapPosition ? (
+                      <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-200 uppercase tracking-widest animate-pulse">Required</span>
+                    ) : (
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-200 uppercase tracking-widest">Saved</span>
+                    )}
+                  </div>
+                  <div className="h-[300px] w-full rounded-lg overflow-hidden border border-slate-300 relative z-10 shadow-sm">
+                    <MapContainer center={defaultPosition} zoom={mapPosition ? 14 : 5} scrollWheelZoom={true} style={{ height: "100%", width: "100%" }}>
+                      <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap' />
+                      <LocationPicker position={mapPosition} setPosition={setMapPosition} />
+                    </MapContainer>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-2 flex items-center gap-1.5">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Click the map to place a pin, then drag it to your exact gate or loading dock.
+                  </p>
                </div>
             </section>
 
             {/* Contact Details Section */}
-            <section className="bg-white rounded-[2.5rem] lg:rounded-[3rem] border border-slate-200 p-6 lg:p-10 shadow-sm space-y-6 lg:space-y-8">
-               <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-2">
-                  <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase">Contact Details</h3>
-                  <label className="flex items-center gap-2 cursor-pointer group">
-                     <input type="checkbox" checked={sameAsProfile} onChange={toggleSameAsProfile} className="hidden"/>
-                     <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${sameAsProfile ? 'bg-emerald-600 border-emerald-600 shadow-lg' : 'bg-white border-slate-200 group-hover:border-emerald-500'}`}>
-                        {sameAsProfile && <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M5 13l4 4L19 7"/></svg>}
-                     </div>
-                     <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest group-hover:text-slate-900">Same as profile</span>
-                  </label>
+            <section className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-5">
+               <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-slate-100 pb-3">
+                  <h3 className="text-lg font-semibold text-slate-900">Point of Contact</h3>
+                  
+                 
                </div>
-               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+
+               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <InputWrapper label="Contact Name" icon="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z">
-                     <input type="text" name="contactName" required value={formData.contactName} onChange={handleInputChange} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500"/>
+                     <input type="text" name="contactName" required value={formData.contactName} onChange={handleInputChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
                   </InputWrapper>
                   <InputWrapper label="Phone Number" icon="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z">
-                     <input type="tel" name="contactPhone" required value={formData.contactPhone} onChange={handleInputChange} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500"/>
+                     <input type="tel" name="contactPhone" required value={formData.contactPhone} onChange={handleInputChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
                   </InputWrapper>
                </div>
-               <InputWrapper label="Special Instructions (Optional)" icon="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
-                  <textarea name="specialInstructions" rows="3" value={formData.specialInstructions} onChange={handleInputChange} placeholder="e.g. Access via South Gate terminal 4..." className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 resize-none"/>
+               
+               <InputWrapper label="Gate / Entry Instructions (Optional)" icon="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                  <textarea name="specialInstructions" rows="3" value={formData.specialInstructions} onChange={handleInputChange} placeholder="e.g. Enter via South Gate terminal 4. Ask for John." className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors resize-none placeholder:text-slate-400"/>
                </InputWrapper>
             </section>
           </div>
 
           {/* Right Column: Photo & Submit */}
-          <div className="lg:col-span-5 space-y-8 lg:space-y-10">
-             <section className="bg-slate-900 rounded-[3rem] p-6 lg:p-10 shadow-2xl relative overflow-hidden group">
-                <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-emerald-400 to-transparent"></div>
-                <h3 className="text-white text-lg font-black tracking-tight mb-8 relative z-10 uppercase">Food Photo</h3>
-                <div 
-                  onClick={() => fileInputRef.current.click()}
-                  className={`relative z-10 w-full h-64 sm:h-80 rounded-[2rem] border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all duration-500 overflow-hidden ${imagePreview ? 'border-emerald-500' : 'border-slate-700 hover:border-slate-500 hover:bg-white/5'}`}
-                >
-                  {imagePreview ? (
-                    <img src={imagePreview} className="w-full h-full object-cover" alt="Preview"/>
-                  ) : (
-                    <div className="text-center p-6">
-                       <div className="w-12 h-12 lg:w-16 lg:h-16 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                         <svg className="w-6 h-6 lg:w-8 lg:h-8 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                         </svg>
-                       </div>
-                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-relaxed">Upload Photo<br/><span className="text-[9px] text-slate-600 tracking-normal font-bold lowercase">Required to post</span></p>
-                    </div>
-                  )}
+          <div className="lg:col-span-1 space-y-6">
+             
+             {/* Verification Block */}
+             <section className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
+                <div className="p-5 border-b border-slate-100">
+                  <h3 className="text-base font-semibold text-slate-900">Food Verification</h3>
+                  <p className="text-xs text-slate-500 mt-1">Clear visual proof is required to ensure trust across the network.</p>
                 </div>
-                <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageChange}/>
-                <div className="mt-8 space-y-4 relative z-10">
-                   <div className="flex items-center gap-3"><div className="w-1 h-1 bg-emerald-500 rounded-full"></div><p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Secure upload</p></div>
-                   <div className="flex items-center gap-3"><div className="w-1 h-1 bg-emerald-500 rounded-full"></div><p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Visible to local NGOs</p></div>
+                
+                <div className="p-5 bg-slate-50 flex-grow">
+                  <div 
+                    onClick={() => fileInputRef.current.click()}
+                    className={`relative w-full h-48 rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-colors overflow-hidden ${imagePreview ? 'border-emerald-500 bg-white' : 'border-slate-300 bg-white hover:border-emerald-400 hover:bg-emerald-50/30 group'}`}
+                  >
+                    {imagePreview ? (
+                      <>
+                        <img src={imagePreview} className="w-full h-full object-cover" alt="Preview"/>
+                        <div className="absolute inset-0 bg-slate-900/50 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold">Change Photo</div>
+                      </>
+                    ) : (
+                      <div className="text-center px-4">
+                         <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center mx-auto mb-3 text-slate-400 group-hover:text-emerald-500 group-hover:bg-emerald-100/50 transition-colors">
+                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                           </svg>
+                         </div>
+                         <p className="text-sm font-semibold text-slate-700 mb-1">Click to Upload</p>
+                         <p className="text-xs text-slate-500">Max size: 5MB</p>
+                      </div>
+                    )}
+                  </div>
+                  <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageChange}/>
                 </div>
              </section>
 
-             <div className="bg-white border border-slate-200 rounded-[2.5rem] p-6 lg:p-10 shadow-sm text-center lg:text-left">
-                <h3 className="text-xs lg:text-sm font-black text-slate-900 uppercase tracking-widest mb-6">Final Confirmation</h3>
-                <div className="space-y-4 lg:space-y-6 mb-10 text-[10px] lg:text-[11px] font-bold text-slate-400 leading-relaxed">
-                   <p>Once posted, your food will be visible to nearby NGOs. Verified organizations will be notified immediately.</p>
-                   <p>By posting, you confirm the food is safe for consumption and follows guidelines.</p>
+             {/* Final Actions Block */}
+             <section className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+                <div className="space-y-3 mb-6">
+                   <div className="flex gap-3 items-start">
+                     <svg className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                     <p className="text-xs text-slate-600 leading-relaxed">By posting, you verify this food complies with local safety and handling regulations.</p>
+                   </div>
+                   <div className="flex gap-3 items-start">
+                     <svg className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                     <p className="text-xs text-slate-600 leading-relaxed">Verified NGO partners in your logistics radius will be notified immediately.</p>
+                   </div>
                 </div>
-                <button type="submit" disabled={isSubmitting} className="w-full py-5 bg-emerald-600 text-white rounded-2xl font-black text-xs uppercase tracking-[0.3em] shadow-xl hover:bg-emerald-700 transition-all active:scale-95 flex items-center justify-center gap-3">
+
+                <button 
+                  type="submit" 
+                  disabled={isSubmitting} 
+                  className={`w-full py-3 rounded-lg font-semibold text-sm shadow-sm transition-all flex items-center justify-center gap-2 ${
+                    isSubmitting ? 'bg-emerald-500 opacity-70 cursor-not-allowed text-white' : 'bg-emerald-600 hover:bg-emerald-700 text-white active:scale-[0.98]'
+                  }`}
+                >
                   {isSubmitting ? (
-                    <div className="w-5 h-5 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
+                    <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
                   ) : (
                     <>
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                      Release Surplus
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                      Release to Network
                     </>
                   )}
                 </button>
-             </div>
+             </section>
           </div>
         </form>
       </div>

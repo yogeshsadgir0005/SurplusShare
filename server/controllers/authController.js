@@ -1,7 +1,7 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
-const https = require('https'); // Native node module, no npm install needed
+const https = require('https');
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -9,10 +9,9 @@ const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 };
 
-// Open-Source Geocoding Helper
-const geocodeLocation = (city, state) => {
+const geocodeLocation = (address, city, state) => {
   return new Promise((resolve) => {
-    const query = encodeURIComponent(`${city}, ${state}, India`);
+    const query = encodeURIComponent(`${address}, ${city}, ${state}, India`);
     const options = {
       hostname: 'nominatim.openstreetmap.org',
       path: `/search?q=${query}&format=json&limit=1`,
@@ -25,9 +24,8 @@ const geocodeLocation = (city, state) => {
       res.on('end', () => {
         try {
           const parsed = JSON.parse(data);
-          if (parsed && parsed.length > 0) {
-            resolve({ lat: parseFloat(parsed[0].lat), lng: parseFloat(parsed[0].lon) });
-          } else resolve({ lat: null, lng: null });
+          if (parsed && parsed.length > 0) resolve({ lat: parseFloat(parsed[0].lat), lng: parseFloat(parsed[0].lon) });
+          else resolve({ lat: null, lng: null });
         } catch(e) { resolve({ lat: null, lng: null }); }
       });
     });
@@ -41,9 +39,17 @@ const registerUser = async (req, res) => {
   const userExists = await User.findOne({ email });
   if (userExists) return res.status(400).json({ message: 'User already exists' });
   
-  // Fetch real coordinates before saving
-  const coords = await geocodeLocation(details.city, details.state);
-  const locationData = { ...details, lat: coords.lat, lng: coords.lng };
+  // USE MAP PIN COORDS IF PROVIDED, OTHERWISE FALLBACK TO TEXT GEOCODE
+  let finalLat = details.lat;
+  let finalLng = details.lng;
+
+  if (!finalLat || !finalLng) {
+    const coords = await geocodeLocation(details.address, details.city, details.state);
+    finalLat = coords.lat;
+    finalLng = coords.lng;
+  }
+
+  const locationData = { ...details, lat: finalLat, lng: finalLng };
 
   const userData = { email, password, role };
   if (role === 'NGO') userData.ngoDetails = locationData;
@@ -77,17 +83,21 @@ const googleAuth = async (req, res) => {
     if (user) return res.json({ _id: user._id, email: user.email, role: user.role, token: generateToken(user._id) });
     if (!role) return res.status(404).json({ message: 'Account not found. Please sign up first.', email, name });
 
-    // New Google Signups get geocoded too
-    let coords = { lat: null, lng: null };
-    if (details && details.city && details.state) {
-      coords = await geocodeLocation(details.city, details.state);
+    // USE MAP PIN COORDS IF PROVIDED, OTHERWISE FALLBACK TO TEXT GEOCODE
+    let finalLat = details?.lat || null;
+    let finalLng = details?.lng || null;
+
+    if ((!finalLat || !finalLng) && details && details.city && details.state) {
+      const coords = await geocodeLocation(details.address, details.city, details.state);
+      finalLat = coords.lat;
+      finalLng = coords.lng;
     }
 
     const generatedPassword = Math.random().toString(36).slice(-10) + 'A1!';
     const userData = { email, password: generatedPassword, role };
     
-    if (role === 'NGO') userData.ngoDetails = { ...details, name: details.name || name, lat: coords.lat, lng: coords.lng };
-    if (role === 'Supplier') userData.supplierDetails = { ...details, legalName: details.legalName || name, lat: coords.lat, lng: coords.lng };
+    if (role === 'NGO') userData.ngoDetails = { ...details, name: details.name || name, lat: finalLat, lng: finalLng };
+    if (role === 'Supplier') userData.supplierDetails = { ...details, legalName: details.legalName || name, lat: finalLat, lng: finalLng };
 
     user = await User.create(userData);
     res.status(201).json({ _id: user._id, email: user.email, role: user.role, token: generateToken(user._id) });

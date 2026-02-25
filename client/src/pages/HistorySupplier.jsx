@@ -25,14 +25,15 @@ const HistorySupplier = () => {
 
   const filteredData = filter === 'All' ? posts : posts.filter(p => p.status === filter);
 
+  // Upgraded SaaS Status Badge
   const StatusBadge = ({ status }) => {
     const styles = {
-      Active: 'bg-emerald-50 text-emerald-600 border-emerald-100',
-      Claimed: 'bg-indigo-50 text-indigo-600 border-indigo-100',
-      Expired: 'bg-rose-50 text-rose-600 border-rose-100'
+      Active: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+      Claimed: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+      Expired: 'bg-slate-100 text-slate-600 border-slate-200'
     };
     return (
-      <span className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${styles[status]}`}>
+      <span className={`px-2.5 py-1 rounded-md text-xs font-medium border ${styles[status]}`}>
         {status}
       </span>
     );
@@ -40,27 +41,30 @@ const HistorySupplier = () => {
 
   return (
     <Layout role="Supplier">
-      <div className="max-w-6xl mx-auto">
-        {/* Responsive Header */}
-        <header className="flex flex-col md:flex-row md:justify-between md:items-end gap-6 mb-12">
+      <div className="max-w-6xl mx-auto space-y-6">
+        
+        {/* Sleek Header & Filters */}
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-200">
            <div>
-              <button 
-                onClick={() => navigate('/supplier/dashboard')} 
-                className="mb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-900 transition-colors flex items-center gap-2"
-              >
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15 19l-7-7 7-7"/></svg>
-                Back to Dashboard
-              </button>
-              <h1 className="text-3xl lg:text-4xl font-black text-slate-900 tracking-tighter">Donation History</h1>
+              <div className="flex items-center gap-2 text-xs font-medium text-slate-500 mb-1">
+                <span className="cursor-pointer hover:text-indigo-600 transition-colors" onClick={() => navigate('/supplier/dashboard')}>Dashboard</span>
+                <span>/</span>
+                <span className="text-slate-900">History Log</span>
+              </div>
+              <h1 className="text-2xl font-bold text-slate-900">Donation History</h1>
            </div>
 
-           {/* Filter Tabs - Scrollable on mobile if needed */}
-           <div className="flex bg-slate-200/50 p-1.5 rounded-2xl overflow-x-auto no-scrollbar">
+           {/* Professional Segmented Control */}
+           <div className="flex bg-slate-100 p-1 rounded-lg overflow-x-auto no-scrollbar border border-slate-200/60">
               {['All', 'Active', 'Claimed', 'Expired'].map(f => (
                 <button 
                   key={f} 
                   onClick={() => setFilter(f)} 
-                  className={`px-5 lg:px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all whitespace-nowrap ${filter === f ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                  className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all whitespace-nowrap ${
+                    filter === f 
+                      ? 'bg-white text-slate-900 shadow-sm border border-slate-200/50' 
+                      : 'text-slate-500 hover:text-slate-700 border border-transparent'
+                  }`}
                 >
                   {f}
                 </button>
@@ -68,62 +72,78 @@ const HistorySupplier = () => {
            </div>
         </header>
 
-        {/* Data Table Card */}
-        <div className="bg-white rounded-[2rem] lg:rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden">
+        {/* Clean Data Table */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
            <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse min-w-[700px]">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-100">
-                    <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date Posted</th>
-                    <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Food Category</th>
-                    <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount</th>
-                    <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
-                    <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
+                <thead className="bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    <th className="px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Date Posted</th>
+                    <th className="px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Food Category</th>
+                    <th className="px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Amount</th>
+                    <th className="px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {loading ? (
-                    <tr>
-                      <td colSpan="5" className="p-12 text-center">
-                        <div className="flex flex-col items-center gap-3">
-                          <div className="w-8 h-8 border-4 border-slate-100 border-t-emerald-500 rounded-full animate-spin"></div>
-                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Synchronizing records...</span>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredData.map((post) => (
-                      <tr key={post._id} className="hover:bg-slate-50/50 transition-colors group">
-                        <td className="p-6 text-xs font-black text-slate-900">{new Date(post.createdAt).toLocaleDateString()}</td>
-                        <td className="p-6">
-                           <p className="text-sm font-black text-slate-900">{post.category}</p>
-                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{post.type === 'Scheduled' ? 'Scheduled' : 'One-Time'}</p>
+                    // Skeleton Rows for Table
+                    [1, 2, 3, 4].map(i => (
+                      <tr key={i} className="animate-pulse">
+                        <td className="px-6 py-4"><div className="h-4 bg-slate-100 rounded w-24"></div></td>
+                        <td className="px-6 py-4">
+                           <div className="h-4 bg-slate-100 rounded w-32 mb-1.5"></div>
+                           <div className="h-3 bg-slate-50 rounded w-20"></div>
                         </td>
-                        <td className="p-6 text-sm font-black text-slate-700">{post.weight} kg</td>
-                        <td className="p-6"><StatusBadge status={post.status} /></td>
-                        <td className="p-6 text-right">
+                        <td className="px-6 py-4"><div className="h-4 bg-slate-100 rounded w-16"></div></td>
+                        <td className="px-6 py-4"><div className="h-6 bg-slate-100 rounded-md w-20"></div></td>
+                        <td className="px-6 py-4 flex justify-end"><div className="h-8 bg-slate-100 rounded-lg w-20"></div></td>
+                      </tr>
+                    ))
+                  ) : filteredData.length > 0 ? (
+                    filteredData.map((post) => (
+                      <tr key={post._id} className="hover:bg-slate-50 transition-colors group">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
+                          {new Date(post.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                        </td>
+                        <td className="px-6 py-4">
+                           <p className="text-sm font-semibold text-slate-900">{post.category}</p>
+                           <p className="text-xs text-slate-500">{post.type === 'Scheduled' ? 'Scheduled Drop' : 'One-Time Release'}</p>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
+                          {post.weight} kg
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <StatusBadge status={post.status} />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right">
                            <button 
                              onClick={() => navigate(`/supplier/manage/${post._id}`)} 
-                             className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg transition-all active:scale-95 ${post.status === 'Active' ? 'bg-slate-900 text-white hover:bg-emerald-600' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+                             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                               post.status === 'Active' 
+                                 ? 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100' 
+                                 : 'text-slate-600 hover:bg-slate-100 border border-slate-200'
+                             }`}
                            >
-                              <span>{post.status === 'Active' ? 'Manage' : 'View'}</span>
-                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                              <span>{post.status === 'Active' ? 'Manage' : 'View Details'}</span>
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/></svg>
                            </button>
                         </td>
                       </tr>
                     ))
+                  ) : (
+                    <tr>
+                      <td colSpan="5" className="px-6 py-16 text-center">
+                         <div className="flex flex-col items-center justify-center">
+                           <svg className="w-10 h-10 text-slate-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                           <p className="text-sm font-medium text-slate-900 mb-1">No records found</p>
+                           <p className="text-sm text-slate-500">There are no history logs matching the '{filter}' filter.</p>
+                         </div>
+                      </td>
+                    </tr>
                   )}
                 </tbody>
               </table>
-
-              {!loading && !filteredData.length && (
-                <div className="py-32 flex flex-col items-center justify-center bg-white px-6 text-center">
-                   <div className="w-16 h-16 lg:w-20 lg:h-20 bg-slate-50 rounded-[2rem] flex items-center justify-center text-slate-200 mb-6 border border-dashed border-slate-200">
-                     <svg className="w-8 h-8 lg:w-10 lg:h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
-                   </div>
-                   <p className="text-sm font-black text-slate-400 uppercase tracking-widest">No matching history records found</p>
-                </div>
-              )}
            </div>
         </div>
       </div>

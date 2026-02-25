@@ -21,10 +21,10 @@ const Login = () => {
       const { data } = await api.post('/auth/login', credentials);
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data));
-      toast.success('Login Successful');
+      toast.success('Authentication Successful');
       navigate(data.role === 'NGO' ? '/ngo/dashboard' : '/supplier/dashboard');
     } catch (err) {
-      toast.error('Invalid Email or Password');
+      toast.error('Invalid Credentials. Please try again.');
     } finally {
       setIsAuthenticating(false);
     }
@@ -36,119 +36,134 @@ const Login = () => {
       const { data } = await api.post('/auth/google', { token: response.credential });
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data));
-      toast.success('Google Login Successful');
+      toast.success('Google Authentication Successful');
       navigate(data.role === 'NGO' ? '/ngo/dashboard' : '/supplier/dashboard');
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Login Failed');
+      toast.error(err.response?.data?.message || 'Authentication Failed');
     } finally {
       setIsAuthenticating(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 sm:p-6 selection:bg-indigo-500/30 overflow-x-hidden">
-      {/* Background Gradients */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-         <div className="absolute top-[-10%] left-[-10%] w-[80%] sm:w-[50%] h-[50%] bg-indigo-600/20 rounded-full blur-[100px] sm:blur-[150px]"></div>
-         <div className="absolute bottom-[-10%] right-[-10%] w-[80%] sm:w-[50%] h-[50%] bg-emerald-600/20 rounded-full blur-[100px] sm:blur-[150px]"></div>
+    <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans selection:bg-indigo-100">
+      
+      {/* Clean Header & Logo */}
+      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
+        <div className="w-12 h-12 bg-slate-900 text-white rounded-xl flex items-center justify-center mx-auto mb-4 shadow-sm">
+          <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2L3 7V17L12 22L21 17V7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M12 22V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M21 7L12 12L3 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </div>
+        <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Sign in to your account</h2>
+        <p className="mt-2 text-sm text-slate-500">
+          Or{' '}
+          <Link to={activeTab === 'NGO' ? '/signup/ngo' : '/signup/supplier'} className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors">
+            register a new {activeTab === 'NGO' ? 'NGO' : 'Donor'} account
+          </Link>
+        </p>
       </div>
 
-      <div className="w-full max-w-xl relative z-10">
-        {/* Main Login Card */}
-        <div className="bg-white/95 backdrop-blur-xl rounded-[2.5rem] sm:rounded-[3rem] p-6 sm:p-12 shadow-2xl border border-white/20">
+      {/* Main Authentication Card */}
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-white py-8 px-4 shadow-sm border border-slate-200 sm:rounded-xl sm:px-10">
           
-          <div className="text-center mb-8 sm:mb-12">
-            <div className="w-14 h-14 sm:w-16 sm:h-16 bg-slate-900 rounded-[1.25rem] flex items-center justify-center mx-auto mb-6 sm:mb-8 shadow-2xl rotate-3">
-              <svg className="w-7 h-7 sm:w-8 sm:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 21l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-              </svg>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tighter uppercase mb-2 leading-none">Welcome Back</h1>
-            <p className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">SurplusShare Platform</p>
-          </div>
-
-          {/* Role Tabs */}
-          <div className="flex bg-slate-100 p-1 sm:p-1.5 rounded-2xl sm:rounded-[1.5rem] mb-8 sm:mb-10">
+          {/* Professional Segmented Control for Role */}
+          <div className="flex bg-slate-100 p-1 rounded-lg mb-8 border border-slate-200/60">
             {['NGO', 'Supplier'].map(tab => (
               <button 
                 key={tab} 
+                type="button"
                 onClick={() => setActiveTab(tab)} 
-                className={`flex-1 py-3 sm:py-4 rounded-xl sm:rounded-2xl text-[10px] sm:text-[11px] font-black uppercase tracking-[0.15em] transition-all duration-300 ${activeTab === tab ? 'bg-white text-slate-900 shadow-lg' : 'text-slate-400 hover:text-slate-600'}`}
+                className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${
+                  activeTab === tab 
+                    ? 'bg-white text-slate-900 shadow-sm border border-slate-200/50' 
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
               >
-                {tab === 'Supplier' ? 'Restaurant' : tab}
+                {tab === 'Supplier' ? 'Food Donor' : 'NGO Partner'}
               </button>
             ))}
           </div>
 
-          <form onSubmit={executeAuth} className="space-y-4 sm:space-y-6">
-            <div className="space-y-1.5">
-               <label className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Email Address</label>
+          <form onSubmit={executeAuth} className="space-y-5">
+            <div>
+               <label className="block text-sm font-semibold text-slate-700 mb-1.5">Email address</label>
                <input 
                  type="email" 
                  name="email" 
                  required 
                  onChange={updateCredentials} 
-                 className="w-full bg-slate-50 border border-slate-200 rounded-2xl sm:rounded-3xl px-6 sm:px-8 py-4 sm:py-5 text-sm font-black outline-none focus:ring-4 focus:ring-slate-900/5 focus:border-slate-900 transition-all placeholder:text-slate-300" 
-                 placeholder="Enter your email..."
+                 className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors placeholder:text-slate-400" 
+                 placeholder="name@company.com"
                />
             </div>
-            <div className="space-y-1.5">
-               <label className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Password</label>
+            
+            <div>
+               <label className="block text-sm font-semibold text-slate-700 mb-1.5">Password</label>
                <input 
                  type="password" 
                  name="password" 
                  required 
                  onChange={updateCredentials} 
-                 className="w-full bg-slate-50 border border-slate-200 rounded-2xl sm:rounded-3xl px-6 sm:px-8 py-4 sm:py-5 text-sm font-black outline-none focus:ring-4 focus:ring-slate-900/5 focus:border-slate-900 transition-all placeholder:text-slate-300" 
+                 className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors placeholder:text-slate-400" 
                  placeholder="••••••••"
                />
             </div>
 
-            <button 
-              type="submit" 
-              disabled={isAuthenticating} 
-              className="w-full py-5 sm:py-6 bg-slate-900 text-white rounded-2xl sm:rounded-[1.5rem] font-black text-[10px] sm:text-xs uppercase tracking-[0.4em] shadow-2xl hover:bg-slate-800 hover:-translate-y-1 transition-all active:scale-95 flex items-center justify-center gap-3"
-            >
-               {isAuthenticating ? <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div> : 'Log In'}
-            </button>
+            <div className="pt-2">
+              <button 
+                type="submit" 
+                disabled={isAuthenticating} 
+                className={`w-full flex justify-center items-center gap-2 py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white transition-all ${
+                  isAuthenticating ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98]'
+                }`}
+              >
+                 {isAuthenticating ? (
+                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                 ) : (
+                   'Sign in'
+                 )}
+              </button>
+            </div>
           </form>
 
-          <div className="mt-10 sm:mt-12 mb-8 sm:mb-10 flex items-center justify-center space-x-6">
-            <div className="h-[2px] bg-slate-100 flex-1"></div>
-            <span className="text-[9px] sm:text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">Or continue with</span>
-            <div className="h-[2px] bg-slate-100 flex-1"></div>
-          </div>
+          {/* Social Login Divider */}
+          <div className="mt-8">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-200"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-3 bg-white text-slate-500 font-medium">Or continue with</span>
+              </div>
+            </div>
 
-          {/* Google Login Container */}
-          <div className="flex justify-center mb-8 sm:mb-12">
-            <div className="w-full shadow-xl shadow-slate-100 rounded-[1.5rem] sm:rounded-3xl overflow-hidden border border-slate-200">
-               <GoogleLogin 
-                 onSuccess={handleGoogleAuthSuccess} 
-                 onError={() => toast.error('Google Login Cancelled')} 
-                 theme="filled_blue" 
-                 shape="rectangular" 
-                 size="large" 
-                 width="100%"
-               />
+            <div className="mt-6">
+              <div className="w-full overflow-hidden rounded-lg border border-slate-300 hover:border-slate-400 transition-colors bg-white">
+                 <GoogleLogin 
+                   onSuccess={handleGoogleAuthSuccess} 
+                   onError={() => toast.error('Google Authentication Cancelled')} 
+                   theme="outline" 
+                   shape="rectangular" 
+                   size="large" 
+                   text="continue_with"
+                   width="100%"
+                 />
+              </div>
             </div>
           </div>
-
-          <div className="text-center pt-6 sm:pt-8 border-t border-slate-50">
-             <p className="text-[10px] sm:text-[11px] font-black text-slate-400 uppercase tracking-widest">
-               Don't have an account? 
-               <Link to={activeTab === 'NGO' ? '/signup/ngo' : '/signup/supplier'} className="text-indigo-600 hover:text-indigo-700 underline decoration-2 underline-offset-4 ml-2">
-                 Sign up here
-               </Link>
-             </p>
-          </div>
-        </div>
-        
-        {/* Footer Details */}
-        <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row justify-between items-center px-8 gap-4">
-           <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.3em]">© 2026 SurplusShare Global</p>
-           <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.3em]">Secure & Protected</p>
+          
         </div>
       </div>
+
+      {/* Clean Footer Details */}
+      <div className="mt-8 text-center">
+         <p className="text-xs text-slate-500 font-medium">© 2026 SurplusShare Global. Secure & Protected.</p>
+      </div>
+      
     </div>
   );
 };

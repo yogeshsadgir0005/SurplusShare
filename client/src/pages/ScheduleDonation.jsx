@@ -5,6 +5,21 @@ import api from '../services/axios';
 import { useLocationAPI } from '../hooks/useLocationAPI';
 import Layout from '../components/Layout';
 
+// Clean B2B Input Wrapper
+const InputWrapper = ({ label, children, icon }) => (
+  <div className="space-y-1.5">
+    <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+      {icon && (
+        <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={icon}/>
+        </svg>
+      )}
+      {label}
+    </label>
+    {children}
+  </div>
+);
+
 const ScheduleDonation = () => {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user'));
@@ -78,136 +93,177 @@ const ScheduleDonation = () => {
 
   return (
     <Layout role="Supplier">
-      <div className="max-w-5xl mx-auto px-4 sm:px-0">
-        <header className="mb-10 sm:mb-16 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6">
+      <div className="max-w-6xl mx-auto space-y-8">
+        
+        {/* Sleek Header */}
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-5">
           <div>
-            <div className="flex items-center gap-3 text-[10px] sm:text-sm font-black text-slate-400 uppercase tracking-widest mb-2">
-              <span>Daily Posting</span>
-              <div className="w-1.5 h-1.5 bg-slate-200 rounded-full"></div>
-              <span className="text-emerald-600">Setup</span>
+            <div className="flex items-center gap-2 text-xs font-medium text-slate-500 mb-1">
+              <span className="cursor-pointer hover:text-emerald-600 transition-colors" onClick={() => navigate('/supplier/dashboard')}>Dashboard</span>
+              <span>/</span>
+              <span className="text-emerald-600">Daily Drops</span>
             </div>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tighter leading-none uppercase">Schedule Daily Drops</h2>
+            <h1 className="text-2xl font-bold text-slate-900">Configure Weekly Schedule</h1>
           </div>
-          <button 
-            onClick={() => navigate('/supplier/dashboard')} 
-            className="mb-0 sm:mb-2 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-900 transition-colors flex items-center gap-2"
-          >
-             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15 19l-7-7 7-7"/></svg>
-             Back to Dashboard
-          </button>
         </header>
 
-        <form onSubmit={executeScheduling} className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 pb-12 lg:pb-0">
-          <div className="space-y-8 lg:space-y-10">
-            {/* Food Details Section */}
-            <div className="bg-white rounded-[2rem] sm:rounded-[2.5rem] border border-slate-200 p-6 sm:p-10 shadow-sm space-y-6 sm:space-y-8">
-               <h3 className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-3 border-b border-slate-100 pb-6 uppercase">
-                  Food Details
-               </h3>
-               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Category</label>
-                     <select name="category" value={formData.category} onChange={handleInputChange} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 appearance-none">
+        <form onSubmit={executeScheduling} className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          
+          {/* Left Column: Data Entry */}
+          <div className="lg:col-span-7 space-y-6">
+            
+            {/* Standard Logistics Card */}
+            <section className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-6">
+               <h3 className="text-lg font-semibold text-slate-900 mb-4 border-b border-slate-100 pb-3">Standard Drop Details</h3>
+               
+               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <InputWrapper label="Category" icon="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4">
+                     <select name="category" value={formData.category} onChange={handleInputChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors">
                         <option>Bakery/Grains</option><option>Dairy</option><option>Produce</option><option>Prepared Meals</option>
                      </select>
-                  </div>
-                  <div className="space-y-2">
-                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Daily Amount (Kg)</label>
-                     <input type="number" step="0.1" name="weight" required value={formData.weight} onChange={handleInputChange} placeholder="0.0" className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500"/>
-                  </div>
+                  </InputWrapper>
+                  <InputWrapper label="Daily Volume (kg)" icon="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3">
+                     <input type="number" step="0.1" name="weight" required value={formData.weight} onChange={handleInputChange} placeholder="0.0" className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
+                  </InputWrapper>
                </div>
 
-               <div className="bg-slate-50 rounded-[1.5rem] sm:rounded-[2rem] p-5 sm:p-6 border border-slate-100">
-                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Provide packaging?</h4>
-                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-                  <label className={`flex-1 p-3.5 sm:p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-center gap-3 ${formData.packaging === true ? 'bg-white border-emerald-500 shadow-lg' : 'bg-transparent border-slate-200 opacity-60'}`}>
+               <div className="bg-slate-50 border border-slate-200 rounded-lg p-5">
+                <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-3">Packaging Protocol</h4>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <label className={`flex-1 p-3 rounded-lg border cursor-pointer transition-all flex items-center gap-3 ${formData.packaging === true ? 'bg-emerald-50 border-emerald-500 text-emerald-800' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
                     <input type="radio" name="packaging" value="true" checked={formData.packaging === true} onChange={handleInputChange} className="hidden" />
-                    <span className="text-xs font-black uppercase tracking-widest">Yes</span>
+                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${formData.packaging === true ? 'border-emerald-500' : 'border-slate-300'}`}>
+                      {formData.packaging === true && <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>}
+                    </div>
+                    <span className="text-sm font-semibold">Packaged</span>
                   </label>
-                  <label className={`flex-1 p-3.5 sm:p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-center gap-3 ${formData.packaging === false ? 'bg-white border-emerald-500 shadow-lg' : 'bg-transparent border-slate-200 opacity-60'}`}>
+                  <label className={`flex-1 p-3 rounded-lg border cursor-pointer transition-all flex items-center gap-3 ${formData.packaging === false ? 'bg-emerald-50 border-emerald-500 text-emerald-800' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
                     <input type="radio" name="packaging" value="false" checked={formData.packaging === false} onChange={handleInputChange} className="hidden" />
-                    <span className="text-xs font-black uppercase tracking-widest">No</span>
+                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${formData.packaging === false ? 'border-emerald-500' : 'border-slate-300'}`}>
+                      {formData.packaging === false && <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>}
+                    </div>
+                    <span className="text-sm font-semibold">Bulk Transfer</span>
                   </label>
                 </div>
                </div>
 
-               <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Shelf Life</label>
-                  <input type="text" name="shelfLife" required value={formData.shelfLife} onChange={handleInputChange} placeholder="e.g. 4 Hours" className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500"/>
-               </div>
-            </div>
+               <InputWrapper label="Shelf Life / Freshness" icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z">
+                  <input type="text" name="shelfLife" required value={formData.shelfLife} onChange={handleInputChange} placeholder="e.g. Needs pickup within 4 hours" className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors placeholder:text-slate-400"/>
+               </InputWrapper>
+            </section>
 
-            {/* Pickup Location Section */}
-            <div className="bg-white rounded-[2rem] sm:rounded-[2.5rem] border border-slate-200 p-6 sm:p-10 shadow-sm space-y-6 sm:space-y-8">
-               <h3 className="text-lg font-black text-slate-900 tracking-tight mb-2 uppercase">Pickup Location</h3>
-               <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Street Address</label>
-                  <input type="text" name="pickupAddress" required value={formData.pickupAddress} onChange={handleInputChange} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500"/>
-               </div>
+            {/* Standard Location Card */}
+            <section className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-6">
+               <h3 className="text-lg font-semibold text-slate-900 mb-4 border-b border-slate-100 pb-3">Pickup Location</h3>
+               <InputWrapper label="Street Address" icon="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z">
+                  <input type="text" name="pickupAddress" required value={formData.pickupAddress} onChange={handleInputChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
+               </InputWrapper>
                
-               <div className="grid grid-cols-1 gap-4 bg-slate-50 border border-slate-100 p-5 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem]">
-                  <div className="space-y-2">
-                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">State</label>
-                     <select name="state" required value={formData.state} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-xs font-black outline-none appearance-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500">
+               <div className="grid grid-cols-1 md:grid-cols-3 gap-5 bg-slate-50 border border-slate-200 p-5 rounded-lg">
+                  <InputWrapper label="State">
+                     <select name="state" required value={formData.state} onChange={handleInputChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors cursor-pointer">
                         <option value="">Select State</option>
                         {states.map(s => <option key={s.state} value={s.state}>{s.state}</option>)}
                      </select>
-                  </div>
-                  <div className="space-y-2">
-                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">District</label>
-                     <select name="district" required value={formData.district} onChange={handleInputChange} disabled={!formData.state} className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-xs font-black outline-none appearance-none disabled:opacity-40 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500">
+                  </InputWrapper>
+                  <InputWrapper label="District">
+                     <select name="district" required value={formData.district} onChange={handleInputChange} disabled={!formData.state} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none disabled:opacity-50 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors cursor-pointer">
                         <option value="">Select District</option>
                         {districts.map(d => <option key={d} value={d}>{d}</option>)}
                      </select>
-                  </div>
-                  <div className="space-y-2">
-                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">City</label>
-                     <input type="text" name="city" required value={formData.city} onChange={handleInputChange} placeholder="City..." className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-xs font-black outline-none placeholder:text-slate-300 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500"/>
-                  </div>
+                  </InputWrapper>
+                  <InputWrapper label="City / Town">
+                     <input type="text" name="city" required value={formData.city} onChange={handleInputChange} placeholder="e.g. Pune" className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors placeholder:text-slate-400"/>
+                  </InputWrapper>
                </div>
-            </div>
+            </section>
 
-            <div className="bg-slate-900 rounded-[2rem] sm:rounded-[2.5rem] p-8 sm:p-10 text-white relative overflow-hidden shadow-2xl">
-               <h4 className="text-xl font-black tracking-tight mb-4 relative z-10">Automatic Posting</h4>
-               <p className="text-slate-400 text-[11px] font-bold leading-relaxed mb-10 relative z-10">Your food surplus will be automatically broadcasting to local NGOs at your specified posting times.</p>
-               <button type="submit" disabled={isSubmitting} className="w-full py-4 bg-emerald-500 text-white rounded-2xl font-black text-xs uppercase tracking-[0.3em] hover:bg-emerald-400 transition-all active:scale-95 shadow-xl">
-                 {isSubmitting ? 'Saving...' : 'Save Schedule'}
-               </button>
-            </div>
+            {/* Restored Point of Contact Card */}
+            <section className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-5">
+               <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-slate-100 pb-3">
+                  <h3 className="text-lg font-semibold text-slate-900">Point of Contact</h3>
+                  <label className="flex items-center gap-2.5 cursor-pointer group">
+                     <div className={`w-4 h-4 rounded flex items-center justify-center transition-colors border ${sameAsProfile ? 'bg-emerald-600 border-emerald-600' : 'bg-white border-slate-300 group-hover:border-emerald-500'}`}>
+                        {sameAsProfile && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"/></svg>}
+                     </div>
+                     <input type="checkbox" checked={sameAsProfile} onChange={toggleSameAsProfile} className="hidden"/>
+                     <span className="text-sm font-medium text-slate-600 group-hover:text-slate-900">Use profile defaults</span>
+                  </label>
+               </div>
+
+               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <InputWrapper label="Contact Name" icon="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z">
+                     <input type="text" name="contactName" required value={formData.contactName} onChange={handleInputChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
+                  </InputWrapper>
+                  <InputWrapper label="Phone Number" icon="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z">
+                     <input type="tel" name="contactPhone" required value={formData.contactPhone} onChange={handleInputChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
+                  </InputWrapper>
+               </div>
+            </section>
           </div>
 
-          <div className="space-y-6 lg:space-y-8">
-             <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.3em] mb-4 sm:mb-6 flex items-center gap-2">
-                <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
-                Weekly Schedule
-             </h3>
-             <div className="space-y-3 sm:space-y-4">
-                {scheduleMatrix.map((item, idx) => (
-                  <div key={item.day} className={`p-5 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border transition-all duration-300 ${item.isActive ? 'bg-white border-emerald-200 shadow-xl' : 'bg-slate-50 border-slate-100 opacity-60'}`}>
-                     <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-4">
-                           <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs ${item.isActive ? 'bg-emerald-600 text-white shadow-lg' : 'bg-slate-200 text-slate-400'}`}>{item.day.charAt(0)}</div>
-                           <span className="text-sm sm:text-base font-black text-slate-800 tracking-tight">{item.day}</span>
+          {/* Right Column: Timetable & Submission */}
+          <div className="lg:col-span-5 space-y-6">
+             <section className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
+                <div className="p-5 border-b border-slate-100 bg-slate-50/50">
+                  <h3 className="text-base font-semibold text-slate-900">Weekly Configuration</h3>
+                  <p className="text-xs text-slate-500 mt-1">Activate the days when drops occur.</p>
+                </div>
+                
+                <div className="divide-y divide-slate-100">
+                   {scheduleMatrix.map((item, idx) => (
+                     <div key={item.day} className={`p-5 transition-colors ${item.isActive ? 'bg-emerald-50/30' : 'bg-white'}`}>
+                        <div className="flex items-center justify-between">
+                           <span className={`text-sm font-semibold transition-colors ${item.isActive ? 'text-emerald-800' : 'text-slate-600'}`}>
+                             {item.day}
+                           </span>
+                           {/* SaaS Toggle Switch */}
+                           <div onClick={() => updateMatrix(idx, 'isActive', !item.isActive)} className={`w-11 h-6 rounded-full p-1 cursor-pointer transition-colors ${item.isActive ? 'bg-emerald-500' : 'bg-slate-200'}`}>
+                              <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${item.isActive ? 'translate-x-5' : 'translate-x-0'}`}></div>
+                           </div>
                         </div>
-                        <div onClick={() => updateMatrix(idx, 'isActive', !item.isActive)} className={`w-12 sm:w-14 h-7 sm:h-8 rounded-full p-1 cursor-pointer transition-all ${item.isActive ? 'bg-emerald-600' : 'bg-slate-300'}`}>
-                           <div className={`w-5 sm:w-6 h-5 sm:h-6 bg-white rounded-full shadow-md transition-all transform ${item.isActive ? 'translate-x-5 sm:translate-x-6' : 'translate-x-0'}`}></div>
-                        </div>
+
+                        {/* Inline Time Editors */}
+                        {item.isActive && (
+                          <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-emerald-100/50 animate-in slide-in-from-top-2 duration-300">
+                             <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-emerald-700">Release Time</label>
+                                <input type="time" value={item.postTime} onChange={(e) => updateMatrix(idx, 'postTime', e.target.value)} className="w-full bg-white border border-emerald-200 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors shadow-sm"/>
+                             </div>
+                             <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-emerald-700">Deadline</label>
+                                <input type="time" value={item.deadlineTime} onChange={(e) => updateMatrix(idx, 'deadlineTime', e.target.value)} className="w-full bg-white border border-emerald-200 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors shadow-sm"/>
+                             </div>
+                          </div>
+                        )}
                      </div>
-                     {item.isActive && (
-                       <div className="grid grid-cols-2 gap-3 sm:gap-4 animate-in slide-in-from-top-2 duration-500">
-                          <div className="space-y-1.5">
-                             <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Post Time</label>
-                             <input type="time" value={item.postTime} onChange={(e) => updateMatrix(idx, 'postTime', e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 sm:py-2.5 text-xs font-black outline-none focus:ring-4 focus:ring-emerald-500/10"/>
-                          </div>
-                          <div className="space-y-1.5">
-                             <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Deadline</label>
-                             <input type="time" value={item.deadlineTime} onChange={(e) => updateMatrix(idx, 'deadlineTime', e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 sm:py-2.5 text-xs font-black outline-none focus:ring-4 focus:ring-emerald-500/10"/>
-                          </div>
-                       </div>
-                     )}
-                  </div>
-                ))}
-             </div>
+                   ))}
+                </div>
+             </section>
+
+             {/* Final Actions Block */}
+             <section className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+                <div className="flex gap-3 items-start mb-5">
+                   <svg className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                   <p className="text-xs text-slate-600 leading-relaxed">System will automatically broadcast this surplus to local network based on active days.</p>
+                </div>
+                <button 
+                  type="submit" 
+                  disabled={isSubmitting} 
+                  className={`w-full py-3 rounded-lg font-semibold text-sm shadow-sm transition-all flex items-center justify-center gap-2 ${
+                    isSubmitting ? 'bg-emerald-500 opacity-70 cursor-not-allowed text-white' : 'bg-emerald-600 hover:bg-emerald-700 text-white active:scale-[0.98]'
+                  }`}
+                >
+                  {isSubmitting ? (
+                    <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"/></svg>
+                      Save Weekly Schedule
+                    </>
+                  )}
+                </button>
+             </section>
           </div>
         </form>
       </div>

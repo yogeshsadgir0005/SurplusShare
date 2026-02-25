@@ -2,9 +2,9 @@ const Post = require('../models/Post');
 const User = require('../models/User');
 const https = require('https');
 
-const geocodeLocation = (city, state) => {
+const geocodeLocation = (address, city, state) => {
   return new Promise((resolve) => {
-    const query = encodeURIComponent(`${city}, ${state}, India`);
+    const query = encodeURIComponent(`${address}, ${city}, ${state}, India`);
     const options = {
       hostname: 'nominatim.openstreetmap.org',
       path: `/search?q=${query}&format=json&limit=1`,
@@ -37,14 +37,13 @@ const getDistanceFromLatLonInKm = (lat1, lon1, lat2, lon2) => {
   return R * c; 
 };
 
-// TOP 5 Leaderboard logic updated
 const getLeaderboard = async (req, res) => {
   try {
     const topDonors = await Post.aggregate([
       { $match: { status: 'Claimed' } }, 
       { $group: { _id: '$supplierId', totalDonated: { $sum: '$weight' } } },
       { $sort: { totalDonated: -1 } },
-      { $limit: 5 } // Changed from 10 to 5 for efficiency
+      { $limit: 5 }
     ]);
 
     const populated = await User.populate(topDonors, {
@@ -71,10 +70,19 @@ const createPost = async (req, res) => {
   const image = req.file ? `/uploads/${req.file.filename}` : '';
 
   try {
-    const coords = await geocodeLocation(city, state);
+    // USE MAP PIN COORDS IF PROVIDED (Form Data sends them as strings)
+    let finalLat = req.body.lat;
+    let finalLng = req.body.lng;
+
+    if (!finalLat || !finalLng || finalLat === 'null' || finalLng === 'null') {
+      const coords = await geocodeLocation(pickupAddress, city, state);
+      finalLat = coords.lat;
+      finalLng = coords.lng;
+    }
+
     const post = new Post({
       supplierId: req.user._id, type, weight, packaging, pickupAddress, 
-      city, district, state, lat: coords.lat, lng: coords.lng, 
+      city, district, state, lat: finalLat, lng: finalLng, 
       shelfLife, category, image, pickupDate, pickupTime, 
       contactName, contactPhone, specialInstructions, 
       scheduledDays: scheduledDays ? JSON.parse(scheduledDays) : []
@@ -131,8 +139,9 @@ const getSupplierPosts = async (req, res) => {
 
 const getPostById = async (req, res) => {
   try {
-    const post = await Post.findById(req.params.id).populate('supplierId', 'supplierDetails.legalName');
+    const post = await Post.findById(req.params.id).populate('supplierId', 'supplierDetails.legalName').lean();
     if (post) {
+      post.hasClaimed = post.claims?.some(c => c.ngoId.toString() === req.user._id.toString());
       res.json(post);
     } else {
       res.status(404).json({ message: 'Resource not found' });
@@ -151,14 +160,14 @@ const updatePost = async (req, res) => {
       
       updatableFields.forEach(field => {
         if (req.body[field] !== undefined) {
-          if ((field === 'city' || field === 'state') && req.body[field] !== post[field]) locationChanged = true;
+          if ((field === 'city' || field === 'state' || field === 'pickupAddress') && req.body[field] !== post[field]) locationChanged = true;
           post[field] = req.body[field];
         }
       });
 
       if (locationChanged) {
-         const coords = await geocodeLocation(post.city, post.state);
-         post.lat = coords.lat; post.lng = coords.lng;
+        const coords = await geocodeLocation(post.pickupAddress, post.city, post.state);
+        post.lat = coords.lat; post.lng = coords.lng;
       }
 
       const updatedPost = await post.save();
@@ -182,13 +191,21 @@ const updatePostStatus = async (req, res) => {
 };
 
 const claimPost = async (req, res) => {
-  const post = await Post.findById(req.params.id);
-  if (post) {
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ message: 'Post not found' });
+
+    const alreadyClaimed = post.claims.some(c => c.ngoId.toString() === req.user._id.toString());
+    if (alreadyClaimed) return res.status(400).json({ message: 'You have already requested to claim this food.' });
+
     const ngo = await User.findById(req.user._id);
     post.claims.push({ ngoId: req.user._id, ngoName: ngo.ngoDetails.name, ngoPhone: ngo.ngoDetails.mobile });
     await post.save();
+    
     res.json({ message: 'Success' });
-  } else res.status(404).json({ message: 'Post not found' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
 
 const manageClaim = async (req, res) => {
@@ -216,18 +233,22 @@ const getSupplierDashboardMetrics = async (req, res) => {
 const getNgoDashboardMetrics = async (req, res) => {
   try {
     const ngoId = req.user._id;
+    
+    // Calculate Stats (Existing Logic remains the same)
     const allNgoPosts = await Post.find({ "claims.ngoId": ngoId });
-    let savedKgs = 0, activeClaims = 0, approvedCount = 0;
+    let savedKgs = 0, activeClaims = 0;
 
     allNgoPosts.forEach(post => {
       const myClaim = post.claims.find(c => c.ngoId.toString() === ngoId.toString());
       if (myClaim) {
-        if (myClaim.status === 'Approved') { savedKgs += post.weight; approvedCount++; }
-        if ((myClaim.status === 'Pending' || myClaim.status === 'Approved') && post.status !== 'Expired') { activeClaims++; }
+        if (myClaim.status === 'Approved') savedKgs += post.weight; 
+        if ((myClaim.status === 'Pending' || myClaim.status === 'Approved') && post.status !== 'Expired') activeClaims++;
       }
     });
 
     const mealsProvided = Math.floor((savedKgs * 1000) / 400);
+
+    // Date formatter helper
     const timeSince = (date) => {
       const seconds = Math.floor((new Date() - date) / 1000);
       let interval = seconds / 86400; if (interval > 1) return Math.floor(interval) + " days ago";
@@ -236,27 +257,34 @@ const getNgoDashboardMetrics = async (req, res) => {
       return "Just now";
     };
 
-    const recentPosts = await Post.find().sort({ createdAt: -1 }).limit(4).populate('supplierId', 'supplierDetails.legalName');
+    // BUG FIX: Filter the feed to ONLY show posts where THIS NGO has interacted (claimed)
+    const interactionHistory = await Post.find({ "claims.ngoId": ngoId })
+      .sort({ updatedAt: -1 }) // Sort by most recent interaction
+      .limit(10)
+      .populate('supplierId', 'supplierDetails.legalName');
     
-    let feed = recentPosts.map(post => {
+    const feed = interactionHistory.map(post => {
       const myClaim = post.claims.find(c => c.ngoId.toString() === ngoId.toString());
-      let action = `Posted ${post.weight}kg ${post.category}`;
-      let status = post.status;
-      if (myClaim) { action = `Claimed by your organization`; status = myClaim.status; } 
-      else if (post.type === 'Scheduled') { action = `Scheduled deployment`; }
       
+      // Determine professional action text based on claim status
+      let actionText = "";
+      if (myClaim.status === 'Pending') actionText = `Requested ${post.weight}kg of ${post.category}`;
+      else if (myClaim.status === 'Approved') actionText = `Claim approved for ${post.weight}kg`;
+      else if (myClaim.status === 'Rejected') actionText = `Request declined for ${post.category}`;
+
       return { 
         _id: post._id, 
         supplier: post.supplierId?.supplierDetails?.legalName || 'System', 
-        action, 
-        time: timeSince(new Date(post.createdAt)), 
-        status: status === 'Active' ? 'Available' : status 
+        action: actionText, 
+        time: timeSince(new Date(post.updatedAt)), // Use updatedAt to show recent status changes
+        status: myClaim.status 
       };
     });
 
-    if (feed.length === 0) feed = [{ supplier: "System Node", action: "Awaiting local surplus activity", time: "Just now", status: "Standby" }];
-
-    res.json({ stats: { activeClaims, mealsProvided, savedKgs }, feed });
+    res.json({ 
+      stats: { activeClaims, mealsProvided, savedKgs }, 
+      feed: feed.length > 0 ? feed : [] 
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

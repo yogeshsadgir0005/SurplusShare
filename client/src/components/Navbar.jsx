@@ -10,7 +10,7 @@ const Navbar = () => {
   const user = JSON.parse(localStorage.getItem('user'));
 
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 20);
+    const handleScroll = () => setIsScrolled(window.scrollY > 10);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -40,7 +40,7 @@ const Navbar = () => {
   };
 
   const HeroIcon = () => (
-    <svg className="w-full h-full" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M12 2L3 7V17L12 22L21 17V7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
       <path d="M12 22V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
       <path d="M21 7L12 12L3 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -49,71 +49,73 @@ const Navbar = () => {
 
   return (
     <>
-      <header className={`fixed top-0 w-full z-[100] transition-all duration-500 ${isScrolled || isMenuOpen ? 'bg-white/80 backdrop-blur-xl border-b border-slate-200 py-4 shadow-sm' : 'bg-transparent py-8'}`}>
-        <div className="max-w-7xl mx-auto px-6 lg:px-10 flex justify-between items-center">
-          <div className="flex items-center gap-4 group cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-            <div className="w-10 h-10 lg:w-12 lg:h-12 bg-slate-900 text-white p-2 lg:p-2.5 rounded-2xl shadow-2xl group-hover:rotate-12 transition-transform duration-500">
+      <header className={`fixed top-0 w-full z-[100] transition-all duration-200 ${isScrolled || isMenuOpen ? 'bg-white/95 backdrop-blur-md border-b border-slate-200 py-3 shadow-sm' : 'bg-transparent py-6'}`}>
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 flex justify-between items-center">
+          
+          {/* Logo */}
+          <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+            <div className="w-8 h-8 bg-slate-900 text-white rounded-lg flex items-center justify-center shadow-sm">
               <HeroIcon />
             </div>
-            <span className="text-xl lg:text-2xl font-black tracking-tighter text-slate-900 uppercase">Surplus<span className="text-emerald-600">Share</span></span>
+            <span className="text-lg font-bold tracking-tight text-slate-900">SurplusShare</span>
           </div>
 
           {/* Desktop Nav */}
-          <div className="hidden lg:flex items-center gap-10">
-            <nav className="flex items-center gap-10">
-              <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({top:0, behavior:'smooth'}); }} className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-900">Home</a>
+          <div className="hidden md:flex items-center gap-8">
+            <nav className="flex items-center gap-6">
+              <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({top:0, behavior:'smooth'}); }} className="text-sm font-medium text-slate-900">Home</a>
               {['Leaderboard', 'Features', 'Impact'].map((item) => (
-                <a key={item} href={`#${item.toLowerCase()}`} className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400 hover:text-slate-900 transition-colors">{item}</a>
+                <a key={item} href={`#${item.toLowerCase()}`} className="text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors">{item}</a>
               ))}
             </nav>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 border-l border-slate-200 pl-8">
               {user ? (
                 <>
-                  <button onClick={() => navigate(user.role === 'NGO' ? '/ngo/dashboard' : '/supplier/dashboard')} className="bg-emerald-600 text-white px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] shadow-xl hover:bg-emerald-700 transition-all active:scale-95">Dashboard</button>
-                  <button onClick={handleLogout} className="bg-slate-100 text-slate-600 px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] hover:bg-rose-50 hover:text-rose-600 transition-all">Log Out</button>
+                  <button onClick={() => navigate(user.role === 'NGO' ? '/ngo/dashboard' : '/supplier/dashboard')} className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-sm hover:bg-indigo-700 transition-colors">Dashboard</button>
+                  <button onClick={handleLogout} className="bg-white text-slate-700 border border-slate-300 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors">Sign Out</button>
                 </>
               ) : (
-                <button onClick={() => navigate('/login')} className="bg-slate-900 text-white px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] hover:bg-slate-800 transition-all shadow-2xl shadow-slate-200 active:scale-95">Log In</button>
+                <button onClick={() => navigate('/login')} className="bg-slate-900 text-white px-5 py-2 rounded-lg text-sm font-semibold shadow-sm hover:bg-slate-800 transition-colors">Sign In</button>
               )}
             </div>
           </div>
 
           {/* Mobile Menu Toggle */}
           <button 
-            className="lg:hidden p-2 text-slate-900"
+            className="md:hidden p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
             {isMenuOpen ? (
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>
             ) : (
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
             )}
           </button>
         </div>
 
         {/* Mobile Dropdown Menu */}
         {isMenuOpen && (
-          <div className="lg:hidden bg-white border-b border-slate-100 p-8 space-y-8 animate-in slide-in-from-top duration-300">
-            <nav className="flex flex-col gap-6">
+          <div className="md:hidden bg-white border-b border-slate-200 px-6 py-4 shadow-lg animate-in slide-in-from-top-2 duration-200 absolute w-full top-full left-0">
+            <nav className="flex flex-col gap-4 mb-6">
               {['Home', 'Leaderboard', 'Features', 'Impact'].map((item) => (
                 <a 
                   key={item} 
                   href={item === 'Home' ? '#' : `#${item.toLowerCase()}`}
                   onClick={() => setIsMenuOpen(false)}
-                  className="text-xs font-black uppercase tracking-[0.3em] text-slate-400 hover:text-slate-900 transition-colors"
+                  className="text-sm font-medium text-slate-600 hover:text-slate-900"
                 >
                   {item}
                 </a>
               ))}
             </nav>
-            <div className="pt-8 border-t border-slate-50 flex flex-col gap-4">
+            <div className="pt-4 border-t border-slate-100 flex flex-col gap-3">
               {user ? (
                 <>
-                  <button onClick={() => navigate(user.role === 'NGO' ? '/ngo/dashboard' : '/supplier/dashboard')} className="w-full py-4 bg-emerald-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] shadow-xl">Dashboard</button>
-                  <button onClick={handleLogout} className="w-full py-4 bg-slate-100 text-slate-600 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em]">Log Out</button>
+                  <button onClick={() => navigate(user.role === 'NGO' ? '/ngo/dashboard' : '/supplier/dashboard')} className="w-full py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-semibold shadow-sm">Go to Dashboard</button>
+                  <button onClick={handleLogout} className="w-full py-2.5 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-semibold">Sign Out</button>
                 </>
               ) : (
-                <button onClick={() => navigate('/login')} className="w-full py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] shadow-2xl">Log In</button>
+                <button onClick={() => navigate('/login')} className="w-full py-2.5 bg-slate-900 text-white rounded-lg text-sm font-semibold shadow-sm">Sign In</button>
               )}
             </div>
           </div>
@@ -123,19 +125,20 @@ const Navbar = () => {
       {/* Logic Exposer for Landing Page */}
       <div id="smart-ctas" className="hidden" data-ngo={handleNgoClick} data-supplier={handleSupplierClick}></div>
 
+      {/* SaaS Standard Alert Modal */}
       {showLogoutModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-[2.5rem] p-10 max-w-md w-full shadow-2xl">
-            <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center mb-6">
-              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-xl p-6 sm:p-8 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="w-12 h-12 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center mb-5">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
             </div>
-            <h3 className="text-2xl font-black text-slate-900 tracking-tight mb-3">Log Out & Continue?</h3>
-            <p className="text-sm font-bold text-slate-500 mb-8 leading-relaxed">
-              You are currently logged in as a <strong>{user?.role}</strong>. To register as a {targetSignupRole === 'ngo' ? 'NGO' : 'Restaurant'}, we need to log you out first.
+            <h3 className="text-lg font-bold text-slate-900 mb-2">Switch Account Role?</h3>
+            <p className="text-sm text-slate-600 mb-8 leading-relaxed">
+              You are currently logged in as a <strong>{user?.role}</strong>. To register as a {targetSignupRole === 'ngo' ? 'NGO' : 'Donor'}, you must sign out of your current session. Proceed?
             </p>
-            <div className="flex gap-4">
-              <button onClick={() => setShowLogoutModal(false)} className="flex-1 py-4 bg-slate-100 text-slate-600 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-slate-200 transition-colors">Cancel</button>
-              <button onClick={confirmRoleSwitch} className="flex-[1.5] py-4 bg-rose-600 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-rose-200">Yes, Log Out</button>
+            <div className="flex gap-3">
+              <button onClick={() => setShowLogoutModal(false)} className="flex-1 py-2.5 px-4 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors">Cancel</button>
+              <button onClick={confirmRoleSwitch} className="flex-1 py-2.5 px-4 bg-rose-600 text-white rounded-lg text-sm font-semibold hover:bg-rose-700 shadow-sm transition-colors">Sign Out</button>
             </div>
           </div>
         </div>

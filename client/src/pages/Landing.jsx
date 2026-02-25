@@ -71,162 +71,172 @@ const Landing = () => {
   return (
     <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-emerald-100 overflow-x-hidden">
       
-      {/* Dynamic Navbar Component */}
       <Navbar />
 
       <main className="relative">
-        {/* Hero Section */}
-        <section className="pt-32 md:pt-48 lg:pt-60 pb-20 lg:pb-40 overflow-hidden px-6 lg:px-0">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full pointer-events-none -z-10">
-            <div className="absolute top-[-10%] left-[-10%] w-[80%] h-[60%] bg-emerald-50 rounded-full blur-[100px] lg:blur-[150px] opacity-60"></div>
-            <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-indigo-50 rounded-full blur-[100px] lg:blur-[150px] opacity-60"></div>
-          </div>
-
-          <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-16 lg:gap-24 items-center">
-            <div className="lg:col-span-7 space-y-8 lg:space-y-12 text-center lg:text-left">
-              <div className="inline-flex items-center gap-3 px-5 py-2 bg-emerald-50 border border-emerald-100 rounded-full">
-                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-ping"></div>
-                <span className="text-[10px] font-black text-emerald-700 uppercase tracking-[0.2em]">Live Now v1.0</span>
+        {/* Clean SaaS Hero Section */}
+        <section className="pt-32 md:pt-40 lg:pt-48 pb-16 lg:pb-32 px-6 lg:px-8 border-b border-slate-100 bg-slate-50/50">
+          <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+            
+            <div className="space-y-8 text-center lg:text-left">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-md shadow-sm">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <span className="text-xs font-semibold text-emerald-700">Platform Live • v1.0</span>
               </div>
-              <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black text-slate-900 leading-[0.95] tracking-tighter">
-                Working <br /> To End <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-indigo-600">Food Waste.</span>
+              
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-slate-900 leading-[1.1] tracking-tight">
+                Enterprise Logistics for <br className="hidden lg:block"/>
+                <span className="text-indigo-600">Surplus Food.</span>
               </h1>
-              <p className="text-lg lg:text-xl font-bold text-slate-400 leading-relaxed max-w-2xl mx-auto lg:mx-0">
-                SurplusShare connects food donors directly to verified NGOs. We help minimize hunger by making food sharing easy and fast.
+              
+              <p className="text-base lg:text-lg text-slate-600 leading-relaxed max-w-xl mx-auto lg:mx-0">
+                SurplusShare provides a secure, reliable infrastructure connecting commercial food donors directly to verified NGO networks to minimize waste efficiently.
               </p>
-              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 lg:gap-6 pt-4">
+              
+              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-2">
                 <button 
                   onClick={handleNgoAction}
-                  className="w-full sm:w-auto px-8 lg:px-10 py-5 lg:py-6 bg-indigo-600 text-white rounded-[2rem] font-black text-xs uppercase tracking-[0.3em] shadow-xl hover:bg-indigo-700 hover:-translate-y-1 transition-all active:scale-95 flex items-center justify-center gap-4"
+                  className="w-full sm:w-auto px-6 py-3.5 bg-indigo-600 text-white rounded-lg font-semibold text-sm shadow-sm hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
                 >
-                  {user?.role === 'NGO' ? 'NGO Dashboard' : 'Register as an NGO'}
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                  {user?.role === 'NGO' ? 'NGO Dashboard' : 'Register as NGO'}
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
                 </button>
                 <button 
                   onClick={handleSupplierAction}
-                  className="w-full sm:w-auto px-8 lg:px-10 py-5 lg:py-6 bg-white text-slate-900 border-2 border-slate-100 rounded-[2rem] font-black text-xs uppercase tracking-[0.3em] hover:bg-slate-50 transition-all flex items-center justify-center gap-4 active:scale-95"
+                  className="w-full sm:w-auto px-6 py-3.5 bg-white text-slate-700 border border-slate-300 rounded-lg font-semibold text-sm shadow-sm hover:bg-slate-50 transition-colors flex items-center justify-center gap-2"
                 >
-                  {user?.role === 'Supplier' ? 'Donor Dashboard' : 'Register as a Restaurant'}
+                  {user?.role === 'Supplier' ? 'Donor Dashboard' : 'Register as Donor'}
                 </button>
               </div>
             </div>
 
-            <div className="lg:col-span-5 relative mt-10 lg:mt-0 px-6 lg:px-0">
-              <div className="relative z-10 bg-slate-900 p-3 lg:p-4 rounded-[3.5rem] lg:rounded-[4rem] shadow-2xl rotate-2 lg:rotate-3">
-                <img src="https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?q=80&w=2070" className="rounded-[2.5rem] lg:rounded-[3.5rem] grayscale-[30%] hover:grayscale-0 transition-all duration-700 aspect-[4/5] object-cover" alt="Impact"/>
-                <div className="absolute -bottom-6 -left-6 lg:-bottom-10 lg:-left-10 bg-white p-6 lg:p-8 rounded-[2rem] lg:rounded-[2.5rem] shadow-2xl border border-slate-100 max-w-[180px] lg:max-w-[240px]">
-                   <div className="text-3xl lg:text-5xl font-black text-emerald-600 tracking-tighter mb-2">1.2M+</div>
-                   <p className="text-[9px] lg:text-[10px] font-black text-slate-400 uppercase tracking-widest leading-relaxed">Meals shared globally this year.</p>
+            <div className="relative mt-8 lg:mt-0 px-4 sm:px-8 lg:px-0">
+              <div className="relative bg-white p-2 rounded-2xl shadow-xl border border-slate-200">
+                <img 
+                  src="https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?q=80&w=2070" 
+                  className="rounded-xl object-cover aspect-[4/3] w-full" 
+                  alt="Logistics Impact"
+                />
+                {/* Clean Floating Stat Card */}
+                <div className="absolute -bottom-6 -left-4 lg:-bottom-8 lg:-left-8 bg-white p-5 rounded-xl shadow-lg border border-slate-200 flex items-center gap-4">
+                   <div className="w-12 h-12 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-600">
+                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                   </div>
+                   <div>
+                     <div className="text-2xl font-bold text-slate-900 leading-none mb-1">1.2M+</div>
+                     <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Meals Processed</p>
+                   </div>
                 </div>
               </div>
             </div>
+
           </div>
         </section>
 
-        {/* Leaderboard Section */}
-        <section id="leaderboard" className="py-20 lg:py-40 bg-white border-y border-slate-100 relative overflow-hidden">
-          <div className="max-w-5xl mx-auto px-6 relative z-10">
-            <div className="text-center mb-16 lg:mb-24">
-              <h2 className="text-4xl lg:text-5xl font-black text-slate-900 tracking-tighter uppercase mb-6">Top 5 Heroes</h2>
-              <p className="text-slate-400 font-bold max-w-xl mx-auto text-sm lg:text-base">Celebrating the donors who have contributed the most food to the community.</p>
+        {/* Professional Leaderboard Section */}
+        <section id="leaderboard" className="py-20 lg:py-32 bg-white">
+          <div className="max-w-5xl mx-auto px-6">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl font-bold text-slate-900 tracking-tight mb-4">Top Network Contributors</h2>
+              <p className="text-slate-500 text-base max-w-2xl mx-auto">Recognizing the organizations leading the initiative in surplus food redistribution.</p>
             </div>
 
             {leaderboard.length > 0 ? (
-              <>
-                <div className="flex flex-col lg:flex-row items-center lg:items-end justify-center gap-12 lg:gap-8 mb-20 lg:h-72">
-                  {/* 2nd Place */}
+              <div className="max-w-4xl mx-auto">
+                {/* Top 3 Cards Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
                   {podiumData[0] && (
-                    <div className="order-2 lg:order-1 flex flex-col items-center">
-                      <div className="w-14 h-14 lg:w-16 lg:h-16 bg-slate-200 rounded-full border-4 border-white shadow-xl flex items-center justify-center text-slate-500 font-black mb-4">{podiumData[0].name.charAt(0)}</div>
-                      <div className="w-32 lg:w-32 h-28 lg:h-40 bg-gradient-to-t from-slate-200 to-slate-100 rounded-2xl lg:rounded-t-2xl border-t-4 border-slate-300 flex flex-col items-center justify-center lg:justify-start pt-2 lg:pt-6 shadow-inner">
-                        <span className="text-2xl lg:text-3xl font-black text-slate-400">2</span>
-                        <span className="text-[8px] lg:text-[9px] font-black text-slate-500 uppercase tracking-widest mt-2 px-2 text-center truncate w-full">{podiumData[0].name}</span>
-                        <span className="text-[10px] lg:text-xs font-black text-slate-700">{podiumData[0].totalDonated}kg</span>
-                      </div>
+                    <div className="order-2 sm:order-1 bg-slate-50 border border-slate-200 rounded-xl p-6 text-center relative overflow-hidden flex flex-col items-center justify-center">
+                      <div className="absolute top-0 left-0 w-full h-1 bg-slate-300"></div>
+                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Rank 2</span>
+                      <div className="w-12 h-12 bg-white border border-slate-200 rounded-lg shadow-sm flex items-center justify-center text-slate-600 font-bold mb-4">{podiumData[0].name.charAt(0)}</div>
+                      <h4 className="text-sm font-bold text-slate-900 mb-1 truncate w-full">{podiumData[0].name}</h4>
+                      <p className="text-lg font-semibold text-slate-700">{podiumData[0].totalDonated} kg</p>
                     </div>
                   )}
-                  {/* 1st Place */}
                   {podiumData[1] && (
-                    <div className="order-1 lg:order-2 flex flex-col items-center">
-                      <div className="w-16 h-16 lg:w-20 lg:h-20 bg-amber-100 rounded-full border-4 border-white shadow-2xl flex items-center justify-center text-amber-600 font-black mb-4 text-xl">{podiumData[1].name.charAt(0)}</div>
-                      <div className="w-40 lg:w-36 h-36 lg:h-56 bg-gradient-to-t from-amber-200 to-amber-100 rounded-2xl lg:rounded-t-2xl border-t-4 border-amber-400 flex flex-col items-center justify-center lg:justify-start pt-2 lg:pt-6 shadow-inner relative">
-                        <span className="text-4xl lg:text-5xl font-black text-amber-500">1</span>
-                        <span className="text-[9px] lg:text-[10px] font-black text-amber-800 uppercase tracking-widest mt-2 px-2 text-center truncate w-full">{podiumData[1].name}</span>
-                        <span className="text-xs lg:text-sm font-black text-slate-900">{podiumData[1].totalDonated}kg</span>
-                      </div>
+                    <div className="order-1 sm:order-2 bg-amber-50 border border-amber-200 rounded-xl p-8 text-center relative overflow-hidden shadow-md flex flex-col items-center justify-center sm:-mt-4">
+                      <div className="absolute top-0 left-0 w-full h-1 bg-amber-400"></div>
+                      <span className="text-xs font-bold text-amber-600 uppercase tracking-wider mb-4 flex items-center gap-1.5"><svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg> Rank 1</span>
+                      <div className="w-16 h-16 bg-white border border-amber-200 rounded-lg shadow-sm flex items-center justify-center text-amber-600 font-bold text-xl mb-4">{podiumData[1].name.charAt(0)}</div>
+                      <h4 className="text-base font-bold text-slate-900 mb-1 truncate w-full">{podiumData[1].name}</h4>
+                      <p className="text-xl font-bold text-amber-700">{podiumData[1].totalDonated} kg</p>
                     </div>
                   )}
-                  {/* 3rd Place */}
                   {podiumData[2] && (
-                    <div className="order-3 lg:order-3 flex flex-col items-center">
-                      <div className="w-14 h-14 lg:w-16 lg:h-16 bg-orange-100 rounded-full border-4 border-white shadow-xl flex items-center justify-center text-orange-600 font-black mb-4">{podiumData[2].name.charAt(0)}</div>
-                      <div className="w-32 lg:w-32 h-24 lg:h-32 bg-gradient-to-t from-orange-200/50 to-orange-100 rounded-2xl lg:rounded-t-2xl border-t-4 border-orange-300 flex flex-col items-center justify-center lg:justify-start pt-2 lg:pt-6 shadow-inner">
-                        <span className="text-2xl lg:text-3xl font-black text-orange-400">3</span>
-                        <span className="text-[8px] lg:text-[9px] font-black text-orange-800 uppercase tracking-widest mt-2 px-2 text-center truncate w-full">{podiumData[2].name}</span>
-                        <span className="text-[10px] lg:text-xs font-black text-slate-700">{podiumData[2].totalDonated}kg</span>
-                      </div>
+                    <div className="order-3 sm:order-3 bg-orange-50 border border-orange-200 rounded-xl p-6 text-center relative overflow-hidden flex flex-col items-center justify-center">
+                      <div className="absolute top-0 left-0 w-full h-1 bg-orange-300"></div>
+                      <span className="text-xs font-bold text-orange-600 uppercase tracking-wider mb-4">Rank 3</span>
+                      <div className="w-12 h-12 bg-white border border-orange-200 rounded-lg shadow-sm flex items-center justify-center text-orange-600 font-bold mb-4">{podiumData[2].name.charAt(0)}</div>
+                      <h4 className="text-sm font-bold text-slate-900 mb-1 truncate w-full">{podiumData[2].name}</h4>
+                      <p className="text-lg font-semibold text-orange-700">{podiumData[2].totalDonated} kg</p>
                     </div>
                   )}
                 </div>
 
-                <div className="max-w-3xl mx-auto space-y-3 px-4 sm:px-0">
-                  {listData.map((donor, idx) => (
-                    <div key={donor.id} className="flex items-center justify-between p-4 lg:p-5 bg-slate-50 rounded-2xl border border-slate-100">
-                      <div className="flex items-center gap-4 lg:gap-5 min-w-0">
-                        <div className="w-6 font-black text-slate-300 text-base lg:text-lg">#{idx + 4}</div>
-                        <div className="w-8 h-8 lg:w-10 lg:h-10 bg-white border border-slate-200 rounded-full flex items-center justify-center font-black text-[10px] text-slate-500 shrink-0">{donor.name.charAt(0)}</div>
-                        <div className="min-w-0">
-                          <p className="text-xs lg:text-sm font-black text-slate-900 truncate">{donor.name}</p>
-                          <p className="text-[8px] lg:text-[10px] font-bold text-slate-400 uppercase tracking-widest">{donor.city}</p>
+                {/* Clean List Data */}
+                <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                  <div className="divide-y divide-slate-100">
+                    {listData.map((donor, idx) => (
+                      <div key={donor.id} className="flex items-center justify-between p-4 sm:px-6 hover:bg-slate-50 transition-colors">
+                        <div className="flex items-center gap-4 min-w-0">
+                          <span className="text-sm font-semibold text-slate-400 w-6">#{idx + 4}</span>
+                          <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center text-slate-600 font-semibold text-sm shrink-0">{donor.name.charAt(0)}</div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-slate-900 truncate">{donor.name}</p>
+                            <p className="text-xs text-slate-500 truncate">{donor.city}</p>
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-sm font-semibold text-slate-900">{donor.totalDonated} kg</p>
                         </div>
                       </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-sm lg:text-base font-black text-slate-900">{donor.totalDonated}kg</p>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </>
+              </div>
             ) : (
-              <div className="text-center py-20 text-slate-400 font-bold uppercase tracking-widest text-xs">
-                Aggregating Leaderboard Data...
+              <div className="text-center py-20 text-slate-500 font-medium text-sm">
+                Aggregating network data...
               </div>
             )}
           </div>
         </section>
 
-        {/* Features Section */}
-        <section id="features" className="py-20 lg:py-40 bg-slate-50 border-y border-slate-100">
-          <div className="max-w-7xl mx-auto px-6 lg:px-10">
-             <div className="text-center mb-16 lg:mb-32">
-                <h2 className="text-3xl lg:text-4xl font-black text-slate-900 tracking-tighter uppercase mb-6">Made For Both Sides</h2>
-                <p className="text-slate-400 font-bold max-w-xl mx-auto text-sm lg:text-base">Easy-to-use dashboards designed specifically for food donors and NGOs.</p>
+        {/* B2B Features Section */}
+        <section id="features" className="py-20 lg:py-32 bg-slate-50 border-y border-slate-200">
+          <div className="max-w-6xl mx-auto px-6 lg:px-8">
+             <div className="text-center mb-16">
+                <h2 className="text-3xl font-bold text-slate-900 tracking-tight mb-4">Dual-Sided Infrastructure</h2>
+                <p className="text-slate-500 text-base max-w-2xl mx-auto">Purpose-built interfaces to handle the specific operational needs of both donors and receivers.</p>
              </div>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-12">
-                <div className="bg-white p-10 lg:p-16 rounded-[3rem] lg:rounded-[4rem] border border-slate-200 shadow-sm group hover:border-indigo-500 transition-all duration-500">
-                   <div className="w-16 h-16 lg:w-20 lg:h-20 bg-indigo-50 text-indigo-600 rounded-2xl lg:rounded-[2rem] flex items-center justify-center mb-8 lg:mb-10">
-                      <svg className="w-8 h-8 lg:w-10 lg:h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="bg-white p-8 lg:p-10 rounded-2xl border border-slate-200 shadow-sm transition-shadow hover:shadow-md">
+                   <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center mb-6">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
                    </div>
-                   <h3 className="text-2xl lg:text-3xl font-black text-slate-900 tracking-tight mb-6">For NGOs</h3>
-                   <ul className="space-y-4 lg:space-y-6">
-                      {['Find food closest to you', 'Claim food instantly', 'Easy pickup coordination'].map((li, i) => (
-                        <li key={i} className="flex items-center gap-4 text-slate-500 font-bold text-sm lg:text-base">
-                           <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full shrink-0"></div>
+                   <h3 className="text-xl font-bold text-slate-900 mb-4">NGO Control Center</h3>
+                   <ul className="space-y-4">
+                      {['Real-time proximity matching', 'One-click claim protocol', 'Automated routing & directions'].map((li, i) => (
+                        <li key={i} className="flex items-center gap-3 text-slate-600 text-sm font-medium">
+                           <svg className="w-5 h-5 text-indigo-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"/></svg>
                            {li}
                         </li>
                       ))}
                    </ul>
                 </div>
-                <div className="bg-white p-10 lg:p-16 rounded-[3rem] lg:rounded-[4rem] border border-slate-200 shadow-sm group hover:border-emerald-500 transition-all duration-500">
-                   <div className="w-16 h-16 lg:w-20 lg:h-20 bg-emerald-50 text-emerald-600 rounded-2xl lg:rounded-[2rem] flex items-center justify-center mb-8 lg:mb-10">
-                      <svg className="w-8 h-8 lg:w-10 lg:h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                <div className="bg-white p-8 lg:p-10 rounded-2xl border border-slate-200 shadow-sm transition-shadow hover:shadow-md">
+                   <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center mb-6">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
                    </div>
-                   <h3 className="text-2xl lg:text-3xl font-black text-slate-900 tracking-tight mb-6">For Food Donors</h3>
-                   <ul className="space-y-4 lg:space-y-6">
-                      {['Track your total donations', 'Schedule daily food drops', 'Safe and secure process'].map((li, i) => (
-                        <li key={i} className="flex items-center gap-4 text-slate-500 font-bold text-sm lg:text-base">
-                           <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full shrink-0"></div>
+                   <h3 className="text-xl font-bold text-slate-900 mb-4">Donor Command System</h3>
+                   <ul className="space-y-4">
+                      {['Centralized claim approvals', 'Automated recurring drops', 'Comprehensive impact analytics'].map((li, i) => (
+                        <li key={i} className="flex items-center gap-3 text-slate-600 text-sm font-medium">
+                           <svg className="w-5 h-5 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"/></svg>
                            {li}
                         </li>
                       ))}
@@ -236,20 +246,19 @@ const Landing = () => {
           </div>
         </section>
 
-        {/* Impact Section */}
-        <section id="impact" className="py-20 lg:py-40 bg-slate-900 text-white overflow-hidden relative">
-           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20"></div>
-           <div className="max-w-7xl mx-auto px-10 relative z-10">
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-20 text-center">
+        {/* Clean Metrics Section */}
+        <section id="impact" className="py-20 bg-slate-900 text-white">
+           <div className="max-w-6xl mx-auto px-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12 text-center divide-x-0 md:divide-x divide-slate-800">
                  {[
-                   { val: "450k+", label: "Kgs Saved" },
-                   { val: "1.2M", label: "Meals Shared" },
-                   { val: "850", label: "Food Donors" },
+                   { val: "450k+", label: "Kilos Saved" },
+                   { val: "1.2M", label: "Meals Redirected" },
+                   { val: "850", label: "Verified Donors" },
                    { val: "2.4k", label: "NGO Partners" }
                  ].map((stat, i) => (
-                   <div key={i} className="space-y-2 lg:space-y-4">
-                      <div className="text-4xl lg:text-7xl font-black tracking-tighter text-emerald-400">{stat.val}</div>
-                      <div className="text-[8px] lg:text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">{stat.label}</div>
+                   <div key={i} className="space-y-2">
+                      <div className="text-3xl lg:text-4xl font-bold text-white">{stat.val}</div>
+                      <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide">{stat.label}</div>
                    </div>
                  ))}
               </div>
@@ -257,37 +266,42 @@ const Landing = () => {
         </section>
       </main>
 
-      <footer className="bg-white border-t border-slate-100 py-12 lg:py-20">
-         <div className="max-w-7xl mx-auto px-10 flex flex-col lg:flex-row justify-between items-center gap-10">
-            <div className="flex items-center gap-4">
-               <div className="w-10 h-10 bg-slate-900 text-white p-2 rounded-xl">
+      {/* Clean Footer */}
+      <footer className="bg-white border-t border-slate-200 py-10">
+         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div className="flex items-center gap-3">
+               <div className="w-8 h-8 bg-slate-900 text-white p-1.5 rounded-lg">
                  <svg className="w-full h-full" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L3 7V17L12 22L21 17V7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M12 22V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M21 7L12 12L3 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                </div>
-               <span className="text-xl font-black tracking-tighter uppercase">SurplusShare</span>
+               <span className="text-lg font-bold text-slate-900 tracking-tight">SurplusShare</span>
             </div>
-            <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.5em] text-center">© 2026 Global Food Sharing Network</p>
-            <div className="flex flex-wrap justify-center gap-6 lg:gap-10">
-               {['Privacy', 'Legal', 'Safety', 'Press'].map(l => (
-                 <span key={l} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 cursor-pointer transition-colors">{l}</span>
+            <p className="text-sm font-medium text-slate-500">© 2026 Logistics Network. All rights reserved.</p>
+            <div className="flex gap-6">
+               {['Privacy', 'Terms', 'Security'].map(l => (
+                 <span key={l} className="text-sm font-medium text-slate-500 hover:text-slate-900 cursor-pointer transition-colors">{l}</span>
                ))}
             </div>
          </div>
       </footer>
 
-      {/* Role-Switch Logout Modal */}
+      {/* SaaS Standard Alert Modal */}
       {showLogoutModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white rounded-[2.5rem] p-8 lg:p-10 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-300">
-            <div className="w-14 h-14 lg:w-16 lg:h-16 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center mb-6">
-              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-xl p-6 sm:p-8 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="w-12 h-12 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center mb-5">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
             </div>
-            <h3 className="text-xl lg:text-2xl font-black text-slate-900 tracking-tight mb-3">Log Out & Continue?</h3>
-            <p className="text-xs lg:text-sm font-bold text-slate-500 mb-8 leading-relaxed">
-              You are currently logged in as a <strong>{user?.role}</strong>. To register as a {targetSignupRole === 'ngo' ? 'NGO' : 'Restaurant'}, we need to log you out first. Do you want to proceed?
+            <h3 className="text-lg font-bold text-slate-900 mb-2">Switch Account Role?</h3>
+            <p className="text-sm text-slate-600 mb-8 leading-relaxed">
+              You are currently authenticated as a <strong>{user?.role}</strong>. To register as a {targetSignupRole === 'ngo' ? 'NGO' : 'Donor'}, you must log out of your current session. Proceed?
             </p>
-            <div className="flex gap-4">
-              <button onClick={() => setShowLogoutModal(false)} className="flex-1 py-4 bg-slate-100 text-slate-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-colors">Cancel</button>
-              <button onClick={confirmRoleSwitch} className="flex-[1.5] py-4 bg-rose-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-700 transition-all shadow-lg shadow-rose-200">Yes, Log Out</button>
+            <div className="flex gap-3">
+              <button onClick={() => setShowLogoutModal(false)} className="flex-1 py-2.5 px-4 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors">
+                Cancel
+              </button>
+              <button onClick={confirmRoleSwitch} className="flex-1 py-2.5 px-4 bg-rose-600 text-white rounded-lg text-sm font-semibold hover:bg-rose-700 shadow-sm transition-colors">
+                Sign Out
+              </button>
             </div>
           </div>
         </div>
