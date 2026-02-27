@@ -28,11 +28,21 @@ const ManagePost = () => {
   const [editForm, setEditForm] = useState({});
   const [editScheduleMatrix, setEditScheduleMatrix] = useState([]);
   
-  // New Image States
+  // Image States
   const [imagePreview, setImagePreview] = useState(null);
   const [imageFile, setImageFile] = useState(null);
 
   const { states, districts } = useLocationAPI(editForm.state);
+
+  // Helper to format today's date for the min attribute (YYYY-MM-DD)
+  const getTodayFormatted = () => {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+  const todayFormatted = getTodayFormatted();
 
   useEffect(() => {
     const fetchPost = async () => {
@@ -109,6 +119,18 @@ const ManagePost = () => {
 
   const saveEdits = async () => {
     setActionLocked(true);
+
+    // NEW: 30-Minute Future Validation for OneTime Posts
+    if (post.type === 'OneTime' && editForm.pickupDate && editForm.pickupTime) {
+      const selectedDateTime = new Date(`${editForm.pickupDate}T${editForm.pickupTime}`);
+      const minAllowedTime = new Date(Date.now() + 30 * 60000); 
+      
+      if (selectedDateTime < minAllowedTime) {
+        setActionLocked(false);
+        return toast.error('Pickup time must be at least 30 minutes from the current time.');
+      }
+    }
+
     try {
       const payload = new FormData();
       const updatableFields = ['weight', 'packaging', 'pickupAddress', 'city', 'district', 'state', 'shelfLife', 'category', 'pickupDate', 'pickupTime', 'contactName', 'contactPhone', 'specialInstructions'];
@@ -127,13 +149,14 @@ const ManagePost = () => {
          payload.append('image', imageFile);
       }
 
-      const { data } = await api.put(`/posts/${id}`, payload, { headers: { 'Content-Type': 'multipart/form-data' } });
+      const { data } = await api.put(`/posts/${id}`, payload);
+      
       setPost(data);
       setIsEditing(false);
       setImageFile(null); // Clear file out of state after saving
       toast.success('Post Updated Successfully');
     } catch (error) {
-      toast.error('Failed to update post');
+      toast.error(error.response?.data?.message || 'Failed to update post');
     } finally {
       setActionLocked(false);
     }
@@ -230,7 +253,8 @@ const ManagePost = () => {
                      {post.type === 'OneTime' && (
                        <>
                          <InputWrapper label="Pickup Date" icon="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
-                            <input type="date" name="pickupDate" value={editForm.pickupDate || ''} onChange={handleEditChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
+                            {/* ADDED: min={todayFormatted} to prevent selecting past dates */}
+                            <input type="date" name="pickupDate" min={todayFormatted} value={editForm.pickupDate || ''} onChange={handleEditChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
                          </InputWrapper>
                          <InputWrapper label="Pickup Time" icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z">
                             <input type="time" name="pickupTime" value={editForm.pickupTime || ''} onChange={handleEditChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
@@ -260,9 +284,7 @@ const ManagePost = () => {
 
                      <div className="sm:col-span-2 border-t border-slate-100 pt-5 mt-2 space-y-4">
                         <h4 className="text-sm font-semibold text-slate-900">Location Settings</h4>
-                        <InputWrapper label="Street Address" icon="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z">
-                           <input type="text" name="pickupAddress" value={editForm.pickupAddress || ''} onChange={handleEditChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
-                        </InputWrapper>
+                      
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                            <InputWrapper label="State">
                               <select name="state" value={editForm.state || ''} onChange={handleEditChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors cursor-pointer">
@@ -280,6 +302,9 @@ const ManagePost = () => {
                               <input type="text" name="city" value={editForm.city || ''} onChange={handleEditChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
                            </InputWrapper>
                         </div>
+                          <InputWrapper label="Street Address" icon="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z">
+                           <input type="text" name="pickupAddress" value={editForm.pickupAddress || ''} onChange={handleEditChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
+                        </InputWrapper>
                      </div>
                   </div>
                 ) : (

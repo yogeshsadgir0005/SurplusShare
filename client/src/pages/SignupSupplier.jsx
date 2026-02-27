@@ -116,17 +116,43 @@ const SignupSupplier = () => {
     else setSupplierState(prev => ({ ...prev, [name]: value }));
   };
 
-  const proceedToDetails = (e) => {
+const proceedToDetails = async (e) => {
     e.preventDefault();
     if (supplierState.password !== supplierState.confirmPassword) return toast.error('Passwords do not match');
     if (supplierState.password.length < 8) return toast.error('Minimum 8 characters required');
-    setActiveStage(2);
+    
+    // FIXED: Block progression if email already exists
+    try {
+      await api.post('/auth/check-email', { email: supplierState.email });
+      setActiveStage(2);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Email verification failed');
+    }
   };
 
-  const gAuthCapture = (res) => {
-    setGoogleToken(res.credential);
-    toast.success('Google Authentication Successful');
-    setActiveStage(2);
+  const gAuthCapture = async (resAuth) => {
+    // FIXED: Test if Google account exists before proceeding
+    try {
+      const res = await api.post('/auth/google', { token: resAuth.credential });
+      // If no error, the user exists! Log them straight in.
+      localStorage.setItem('token', res.data.token);
+      localStorage.setItem('user', JSON.stringify(res.data));
+      toast.success('Welcome back! Logged in successfully.');
+      
+      // Route based on what role they had
+      if (res.data.role === 'Supplier') navigate('/supplier/dashboard');
+      else navigate('/ngo/dashboard');
+
+    } catch (error) {
+      // 404 means they don't exist yet, proceed to Profile Setup (Step 2)
+      if (error.response?.status === 404) {
+        setGoogleToken(resAuth.credential);
+        toast.success('Google verified. Please complete your profile.');
+        setActiveStage(2);
+      } else {
+        toast.error('Google Authentication Failed');
+      }
+    }
   };
 
   const commitRegistration = async (e) => {
@@ -251,7 +277,6 @@ const SignupSupplier = () => {
                <div className="pt-4 border-t border-slate-100">
                  <h4 className="text-sm font-semibold text-slate-900 mb-4">Location Configuration</h4>
                  <div className="space-y-5">
-                   <InputField label="Street Address" name="address" value={supplierState.address} onChange={handleUpdate} placeholder="Main Facility Address" />
                    
                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
                      <div className="space-y-1.5">
@@ -272,6 +297,8 @@ const SignupSupplier = () => {
                        <label className="block text-xs font-semibold text-slate-700">City / Town</label>
                        <input type="text" name="city" required value={supplierState.city} onChange={handleUpdate} placeholder="Specific city..." className="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"/>
                      </div>
+                         <InputField label="Street Address" name="address" value={supplierState.address} onChange={handleUpdate} placeholder="Main Facility Address" />
+               
                    </div>
 
                    {/* Clean Map UI with Auto-Center */}

@@ -119,17 +119,43 @@ const SignupNGO = () => {
     else setFormState(prev => ({ ...prev, [name]: value }));
   };
 
-  const advanceStage = (e) => {
+const advanceStage = async (e) => {
     e.preventDefault();
     if (formState.password !== formState.confirmPassword) return toast.error('Passwords do not match');
     if (formState.password.length < 8) return toast.error('Minimum 8 characters required');
-    setCurrentStep(2);
+    
+    // FIXED: Block progression if email already exists
+    try {
+      await api.post('/auth/check-email', { email: formState.email });
+      setCurrentStep(2);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Email verification failed');
+    }
   };
 
-  const initializeGoogleBridge = (response) => {
-    setGoogleCredential(response.credential);
-    toast.success('Google Authentication Successful');
-    setCurrentStep(2);
+const initializeGoogleBridge = async (response) => {
+    // FIXED: Test if Google account exists before proceeding
+    try {
+      const res = await api.post('/auth/google', { token: response.credential });
+      // If no error, the user exists! Log them straight in.
+      localStorage.setItem('token', res.data.token);
+      localStorage.setItem('user', JSON.stringify(res.data));
+      toast.success('Welcome back! Logged in successfully.');
+
+      // Route based on what role they had
+      if (res.data.role === 'NGO') navigate('/ngo/dashboard');
+      else navigate('/supplier/dashboard');
+
+    } catch (error) {
+      // 404 means they don't exist yet, proceed to Profile Setup (Step 2)
+      if (error.response?.status === 404) {
+        setGoogleCredential(response.credential);
+        toast.success('Google verified. Please complete your profile.');
+        setCurrentStep(2);
+      } else {
+        toast.error('Google Authentication Failed');
+      }
+    }
   };
 
   const finalizeOnboarding = async (e) => {
@@ -250,7 +276,6 @@ const SignupNGO = () => {
               <div className="pt-4 border-t border-slate-100">
                 <h4 className="text-sm font-semibold text-slate-900 mb-4">Location Configuration</h4>
                 <div className="space-y-5">
-                  <InputField label="Street Address" name="address" value={formState.address} onChange={syncInput} placeholder="HQ or Main Hub Address" />
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
                     <div className="space-y-1.5">
@@ -271,6 +296,8 @@ const SignupNGO = () => {
                       <label className="block text-xs font-semibold text-slate-700">City / Town</label>
                       <input type="text" name="city" required value={formState.city} onChange={syncInput} placeholder="Specific city..." className="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"/>
                     </div>
+                            <InputField label="Street Address" name="address" value={formState.address} onChange={syncInput} placeholder="HQ or Main Hub Address" />
+          
                   </div>
 
                   {/* Clean Map UI */}

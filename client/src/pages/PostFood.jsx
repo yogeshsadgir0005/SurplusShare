@@ -16,7 +16,6 @@ const customIcon = new L.Icon({
   iconAnchor: [12, 41]
 });
 
-// NEW: Component to smoothly auto-center the map when coords change
 const MapUpdater = ({ position }) => {
   const map = useMap();
   useEffect(() => {
@@ -27,7 +26,6 @@ const MapUpdater = ({ position }) => {
   return null;
 };
 
-// UPDATED: Tracks if the user interacted with the map manually
 const LocationPicker = ({ position, setPosition, lastAction }) => {
   useMapEvents({
     click(e) { 
@@ -67,7 +65,6 @@ const PostFood = () => {
   const [imageFile, setImageFile] = useState(null);
   const [sameAsProfile, setSameAsProfile] = useState(false);
 
-  // NEW: Ref to track interaction source (prevents text-geocode from overriding manual map drags)
   const lastAction = useRef('init'); 
 
   const defaultPosition = (user?.supplierDetails?.lat && user?.supplierDetails?.lng) 
@@ -85,6 +82,16 @@ const PostFood = () => {
 
   const { states, districts } = useLocationAPI(formData.state);
 
+  // Helper to format today's date for the min attribute (YYYY-MM-DD)
+  const getTodayFormatted = () => {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+  const todayFormatted = getTodayFormatted();
+
   useEffect(() => {
     if (user?.supplierDetails) {
       setFormData(prev => ({
@@ -97,21 +104,18 @@ const PostFood = () => {
     }
   }, []);
 
-  // NEW: Auto-Geocoding Effect
   useEffect(() => {
     if (lastAction.current === 'map' || lastAction.current === 'init') return;
 
     const addressParts = [formData.pickupAddress, formData.city, formData.district, formData.state].filter(Boolean);
-    if (addressParts.length < 2) return; // Need at least some details to search
+    if (addressParts.length < 2) return; 
 
     const query = addressParts.join(', ') + ', India';
 
-    // Debounce the API call by 1.2s so it doesn't fire on every single keystroke
     const timeoutId = setTimeout(async () => {
       try {
         const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`);
         const data = await res.json();
-        // Only update if the user hasn't touched the map in the meantime
         if (data && data[0] && lastAction.current === 'text') {
           setMapPosition({ lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) });
         }
@@ -123,7 +127,6 @@ const PostFood = () => {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    // Flag that a text field was modified
     if (['pickupAddress', 'city', 'district', 'state'].includes(name)) {
       lastAction.current = 'text';
     }
@@ -160,6 +163,17 @@ const PostFood = () => {
     if (!mapPosition) return toast.error('Please click the map to pin the exact pickup location. (Required)');
     if (!formData.contactName?.trim() || !formData.contactPhone?.trim()) return toast.error('Contact details are missing.');
     
+    // NEW: 30-Minute Future Validation
+    if (formData.pickupDate && formData.pickupTime) {
+      const selectedDateTime = new Date(`${formData.pickupDate}T${formData.pickupTime}`);
+      // Add 30 minutes (30 * 60,000 milliseconds) to current time
+      const minAllowedTime = new Date(Date.now() + 30 * 60000); 
+      
+      if (selectedDateTime < minAllowedTime) {
+        return toast.error('Pickup time must be at least 30 minutes from the current time.');
+      }
+    }
+
     setIsSubmitting(true);
     try {
       const submission = new FormData();
@@ -234,7 +248,8 @@ const PostFood = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 border-t border-slate-100 pt-5">
                 <InputWrapper label="Pickup Deadline" icon="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
-                  <input type="date" name="pickupDate" required value={formData.pickupDate} onChange={handleInputChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
+                  {/* ADDED: min={todayFormatted} to prevent selecting past dates */}
+                  <input type="date" name="pickupDate" required min={todayFormatted} value={formData.pickupDate} onChange={handleInputChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
                 </InputWrapper>
                 <InputWrapper label="Pickup Time" icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z">
                   <input type="time" name="pickupTime" required value={formData.pickupTime} onChange={handleInputChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
@@ -244,9 +259,7 @@ const PostFood = () => {
 
             <section className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-6">
                <h3 className="text-lg font-semibold text-slate-900 mb-4 border-b border-slate-100 pb-3">Pickup Location</h3>
-               <InputWrapper label="Street Address" icon="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z">
-                  <input type="text" name="pickupAddress" required value={formData.pickupAddress} onChange={handleInputChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
-               </InputWrapper>
+           
                <div className="grid grid-cols-1 md:grid-cols-3 gap-5 bg-slate-50 border border-slate-200 p-5 rounded-lg">
                   <InputWrapper label="State">
                      <select name="state" required value={formData.state} onChange={handleInputChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors cursor-pointer">
@@ -264,7 +277,9 @@ const PostFood = () => {
                      <input type="text" name="city" required value={formData.city} onChange={handleInputChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
                   </InputWrapper>
                </div>
-
+    <InputWrapper label="Street Address" icon="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z">
+                  <input type="text" name="pickupAddress" required value={formData.pickupAddress} onChange={handleInputChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
+               </InputWrapper>
                <div className="pt-2">
                   <div className="flex items-center justify-between mb-2">
                     <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">

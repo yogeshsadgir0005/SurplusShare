@@ -34,6 +34,16 @@ const geocodeLocation = (address, city, state) => {
   });
 };
 
+// NEW: Quick endpoint to verify if an email is already registered
+const checkEmail = async (req, res) => {
+  const { email } = req.body;
+  const userExists = await User.findOne({ email });
+  if (userExists) {
+    return res.status(400).json({ message: 'Email already exists. Please log in.' });
+  }
+  res.status(200).json({ message: 'Email available' });
+};
+
 const registerUser = async (req, res) => {
   const { email, password, role, details } = req.body;
   const userExists = await User.findOne({ email });
@@ -56,7 +66,6 @@ const registerUser = async (req, res) => {
   
   const user = await User.create(userData);
   if (user) {
-    // FIX: Added ngoDetails and supplierDetails to the response
     res.status(201).json({ 
       _id: user._id, 
       email: user.email, 
@@ -74,7 +83,6 @@ const loginUser = async (req, res) => {
   const { email, password } = req.body;
   const user = await User.findOne({ email });
   if (user && (await user.matchPassword(password))) {
-    // FIX: Added ngoDetails and supplierDetails to the response
     res.json({ 
       _id: user._id, 
       email: user.email, 
@@ -96,7 +104,6 @@ const googleAuth = async (req, res) => {
     let user = await User.findOne({ email });
   
     if (user) {
-        // FIX: Added ngoDetails and supplierDetails to the response
         return res.json({ 
             _id: user._id, 
             email: user.email, 
@@ -126,7 +133,6 @@ const googleAuth = async (req, res) => {
 
     user = await User.create(userData);
     
-    // FIX: Added ngoDetails and supplierDetails to the response
     res.status(201).json({ 
         _id: user._id, 
         email: user.email, 
@@ -140,4 +146,4 @@ const googleAuth = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, loginUser, googleAuth };
+module.exports = { registerUser, loginUser, googleAuth, checkEmail }; // Exported checkEmail
