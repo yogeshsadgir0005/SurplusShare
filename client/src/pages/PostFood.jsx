@@ -82,7 +82,6 @@ const PostFood = () => {
 
   const { states, districts } = useLocationAPI(formData.state);
 
-  // Helper to format today's date for the min attribute (YYYY-MM-DD)
   const getTodayFormatted = () => {
     const today = new Date();
     const yyyy = today.getFullYear();
@@ -163,10 +162,8 @@ const PostFood = () => {
     if (!mapPosition) return toast.error('Please click the map to pin the exact pickup location. (Required)');
     if (!formData.contactName?.trim() || !formData.contactPhone?.trim()) return toast.error('Contact details are missing.');
     
-    // NEW: 30-Minute Future Validation
     if (formData.pickupDate && formData.pickupTime) {
       const selectedDateTime = new Date(`${formData.pickupDate}T${formData.pickupTime}`);
-      // Add 30 minutes (30 * 60,000 milliseconds) to current time
       const minAllowedTime = new Date(Date.now() + 30 * 60000); 
       
       if (selectedDateTime < minAllowedTime) {
@@ -182,7 +179,11 @@ const PostFood = () => {
       submission.append('lat', mapPosition.lat);
       submission.append('lng', mapPosition.lng);
 
-      await api.post('/posts', submission);
+      // FIXED: Explicitly force multipart headers so the image isn't lost during POST
+      await api.post('/posts', submission, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
       toast.success('Surplus Released to Network');
       navigate('/supplier/dashboard');
     } catch (err) {
@@ -242,13 +243,12 @@ const PostFood = () => {
                 </div>
               </div>
 
-              <InputWrapper label="Freshness" icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z">
+              <InputWrapper label="Food Life" icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z">
                  <input type="text" name="shelfLife" required value={formData.shelfLife} onChange={handleInputChange} placeholder="e.g. Needs pickup within 4 hours" className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
               </InputWrapper>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 border-t border-slate-100 pt-5">
                 <InputWrapper label="Pickup Deadline" icon="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
-                  {/* ADDED: min={todayFormatted} to prevent selecting past dates */}
                   <input type="date" name="pickupDate" required min={todayFormatted} value={formData.pickupDate} onChange={handleInputChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
                 </InputWrapper>
                 <InputWrapper label="Pickup Time" icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z">

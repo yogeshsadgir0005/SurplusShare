@@ -263,21 +263,21 @@ const ManagePost = () => {
                      )}
                      
                      <div className="sm:col-span-2 bg-slate-50 border border-slate-200 rounded-lg p-4 mt-2">
-                        <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-3">Packaging Protocol</h4>
+                        <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-3">Will you provide packaging ?</h4>
                         <div className="flex flex-col sm:flex-row gap-3">
                           <label className={`flex-1 p-3 rounded-lg border cursor-pointer transition-all flex items-center gap-3 ${editForm.packaging === true ? 'bg-emerald-50 border-emerald-500 text-emerald-800' : 'bg-white border-slate-200 text-slate-600'}`}>
                             <input type="radio" name="packaging" value="true" checked={editForm.packaging === true} onChange={handleEditChange} className="hidden" />
                             <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${editForm.packaging === true ? 'border-emerald-500' : 'border-slate-300'}`}>
                               {editForm.packaging === true && <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>}
                             </div>
-                            <span className="text-sm font-semibold">Packaged</span>
+                            <span className="text-sm font-semibold">YES</span>
                           </label>
                           <label className={`flex-1 p-3 rounded-lg border cursor-pointer transition-all flex items-center gap-3 ${editForm.packaging === false ? 'bg-emerald-50 border-emerald-500 text-emerald-800' : 'bg-white border-slate-200 text-slate-600'}`}>
                             <input type="radio" name="packaging" value="false" checked={editForm.packaging === false} onChange={handleEditChange} className="hidden" />
                             <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${editForm.packaging === false ? 'border-emerald-500' : 'border-slate-300'}`}>
                               {editForm.packaging === false && <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>}
                             </div>
-                            <span className="text-sm font-semibold">Bulk Transfer</span>
+                            <span className="text-sm font-semibold">NO</span>
                           </label>
                         </div>
                      </div>

@@ -16,7 +16,6 @@ const customIcon = new L.Icon({
   iconAnchor: [12, 41]
 });
 
-// NEW: Auto Map Updater
 const MapUpdater = ({ position }) => {
   const map = useMap();
   useEffect(() => {
@@ -25,7 +24,6 @@ const MapUpdater = ({ position }) => {
   return null;
 };
 
-// UPDATED: Tracks manual interactions
 const LocationPicker = ({ position, setPosition, lastAction }) => {
   useMapEvents({
     click(e) { 
@@ -90,7 +88,6 @@ const ScheduleDonation = () => {
     }
   }, []);
 
-  // NEW: Debounced Auto-Geocoder
   useEffect(() => {
     if (lastAction.current === 'map' || lastAction.current === 'init') return;
 
@@ -171,7 +168,11 @@ const ScheduleDonation = () => {
       submission.append('lng', mapPosition.lng);
       submission.append('scheduledDays', JSON.stringify(activeDays));
 
-      await api.post('/posts', submission);
+      // FIXED: Explicitly force multipart headers
+      await api.post('/posts', submission, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
       toast.success('Schedule Saved Successfully');
       navigate('/supplier/dashboard');
     } catch (err) {
@@ -212,7 +213,7 @@ const ScheduleDonation = () => {
                </div>
 
                <div className="bg-slate-50 border border-slate-200 rounded-lg p-5">
-                <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-3">Are you providing packaging ?</h4>
+                <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-3">Will you provide packaging ?</h4>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <label className={`flex-1 p-3 rounded-lg border cursor-pointer transition-all flex items-center gap-3 ${formData.packaging === true ? 'bg-emerald-50 border-emerald-500 text-emerald-800' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
                     <input type="radio" name="packaging" value="true" checked={formData.packaging === true} onChange={handleInputChange} className="hidden" />
@@ -231,16 +232,14 @@ const ScheduleDonation = () => {
                 </div>
                </div>
 
-               <InputWrapper label="Freshness" icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z">
+               <InputWrapper label="Food Life" icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z">
                   <input type="text" name="shelfLife" required value={formData.shelfLife} onChange={handleInputChange} placeholder="e.g. Needs pickup within 4 hours" className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors placeholder:text-slate-400"/>
                </InputWrapper>
             </section>
 
             <section className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-6">
                <h3 className="text-lg font-semibold text-slate-900 mb-4 border-b border-slate-100 pb-3">Pickup Location</h3>
-               <InputWrapper label="Street Address" icon="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z">
-                  <input type="text" name="pickupAddress" required value={formData.pickupAddress} onChange={handleInputChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
-               </InputWrapper>
+            
                
                <div className="grid grid-cols-1 md:grid-cols-3 gap-5 bg-slate-50 border border-slate-200 p-5 rounded-lg">
                   <InputWrapper label="State">
@@ -259,7 +258,9 @@ const ScheduleDonation = () => {
                      <input type="text" name="city" required value={formData.city} onChange={handleInputChange} placeholder="e.g. Pune" className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors placeholder:text-slate-400"/>
                   </InputWrapper>
                </div>
-
+   <InputWrapper label="Street Address" icon="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z">
+                  <input type="text" name="pickupAddress" required value={formData.pickupAddress} onChange={handleInputChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
+               </InputWrapper>
                <div className="pt-2">
                   <div className="flex items-center justify-between mb-2">
                     <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
