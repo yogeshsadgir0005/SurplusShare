@@ -1,19 +1,45 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api from '../services/axios';
 import { useLocationAPI } from '../hooks/useLocationAPI';
 import Layout from '../components/Layout';
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
 
-// Clean B2B Input Wrapper
+const customIcon = new L.Icon({
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41]
+});
+
+// NEW: Auto Map Updater
+const MapUpdater = ({ position }) => {
+  const map = useMap();
+  useEffect(() => {
+    if (position) map.setView(position, 14, { animate: true, duration: 1.5 });
+  }, [position, map]);
+  return null;
+};
+
+// UPDATED: Tracks manual interactions
+const LocationPicker = ({ position, setPosition, lastAction }) => {
+  useMapEvents({
+    click(e) { 
+      if(lastAction) lastAction.current = 'map';
+      setPosition(e.latlng); 
+    },
+  });
+  return position ? <Marker position={position} icon={customIcon} draggable={true} eventHandlers={{ dragstart: () => { if(lastAction) lastAction.current = 'map'; }, dragend: (e) => setPosition(e.target.getLatLng()) }} /> : null;
+};
+
 const InputWrapper = ({ label, children, icon }) => (
   <div className="space-y-1.5">
     <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-      {icon && (
-        <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={icon}/>
-        </svg>
-      )}
+      {icon && <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={icon}/></svg>}
       {label}
     </label>
     {children}
@@ -22,9 +48,23 @@ const InputWrapper = ({ label, children, icon }) => (
 
 const ScheduleDonation = () => {
   const navigate = useNavigate();
+  const fileInputRef = useRef(null);
   const user = JSON.parse(localStorage.getItem('user'));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sameAsProfile, setSameAsProfile] = useState(false);
+  
+  const [imagePreview, setImagePreview] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
+  const lastAction = useRef('init');
+
+  const defaultPosition = (user?.supplierDetails?.lat && user?.supplierDetails?.lng) 
+    ? { lat: user.supplierDetails.lat, lng: user.supplierDetails.lng } 
+    : { lat: 20.5937, lng: 78.9629 };
+    
+  const [mapPosition, setMapPosition] = useState(
+    (user?.supplierDetails?.lat && user?.supplierDetails?.lng) ? defaultPosition : null
+  );
+
   const [scheduleMatrix, setScheduleMatrix] = useState(
     ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => ({ 
       day, isActive: false, postTime: '18:00', deadlineTime: '21:00' 
@@ -50,11 +90,48 @@ const ScheduleDonation = () => {
     }
   }, []);
 
+  // NEW: Debounced Auto-Geocoder
+  useEffect(() => {
+    if (lastAction.current === 'map' || lastAction.current === 'init') return;
+
+    const addressParts = [formData.pickupAddress, formData.city, formData.district, formData.state].filter(Boolean);
+    if (addressParts.length < 2) return; 
+
+    const query = addressParts.join(', ') + ', India';
+
+    const timeoutId = setTimeout(async () => {
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`);
+        const data = await res.json();
+        if (data && data[0] && lastAction.current === 'text') {
+          setMapPosition({ lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) });
+        }
+      } catch (err) { console.error('Auto-geocode failed', err); }
+    }, 1200);
+
+    return () => clearTimeout(timeoutId);
+  }, [formData.pickupAddress, formData.city, formData.district, formData.state]);
+
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
+    if (['pickupAddress', 'city', 'district', 'state'].includes(name)) {
+      lastAction.current = 'text';
+    }
+
     if (name === 'state') setFormData(prev => ({ ...prev, state: value, district: '', city: '' }));
     else if (name === 'district') setFormData(prev => ({ ...prev, district: value, city: '' }));
     else setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : (value === 'true' ? true : value === 'false' ? false : value) }));
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) return toast.error('File exceeds 5MB limit');
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setImagePreview(reader.result);
+      reader.readAsDataURL(file);
+    }
   };
 
   const toggleSameAsProfile = (e) => {
@@ -77,15 +154,28 @@ const ScheduleDonation = () => {
     e.preventDefault();
     const activeDays = scheduleMatrix.filter(d => d.isActive);
     if (!activeDays.length) return toast.error('Please select at least one day');
+    if (!imageFile) return toast.error('Product verification photo required');
+    if (!mapPosition) return toast.error('Please pin the exact pickup location on the map.');
+
+    if (!formData.contactName?.trim() || !formData.contactPhone?.trim()) {
+      return toast.error('Contact details are missing. Please uncheck "Use profile defaults" and fill them in.');
+    }
     
     setIsSubmitting(true);
     try {
-      const payload = { ...formData, scheduledDays: activeDays };
-      await api.post('/posts', payload);
+      const submission = new FormData();
+      Object.keys(formData).forEach(key => submission.append(key, formData[key]));
+      
+      submission.append('image', imageFile);
+      submission.append('lat', mapPosition.lat);
+      submission.append('lng', mapPosition.lng);
+      submission.append('scheduledDays', JSON.stringify(activeDays));
+
+      await api.post('/posts', submission);
       toast.success('Schedule Saved Successfully');
       navigate('/supplier/dashboard');
     } catch (err) {
-      toast.error('Failed to save schedule');
+      toast.error(err.response?.data?.message || 'Failed to save schedule');
     } finally {
       setIsSubmitting(false);
     }
@@ -94,8 +184,6 @@ const ScheduleDonation = () => {
   return (
     <Layout role="Supplier">
       <div className="max-w-6xl mx-auto space-y-8">
-        
-        {/* Sleek Header */}
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-5">
           <div>
             <div className="flex items-center gap-2 text-xs font-medium text-slate-500 mb-1">
@@ -108,14 +196,10 @@ const ScheduleDonation = () => {
         </header>
 
         <form onSubmit={executeScheduling} className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
-          {/* Left Column: Data Entry */}
           <div className="lg:col-span-7 space-y-6">
             
-            {/* Standard Logistics Card */}
             <section className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-6">
                <h3 className="text-lg font-semibold text-slate-900 mb-4 border-b border-slate-100 pb-3">Standard Drop Details</h3>
-               
                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <InputWrapper label="Category" icon="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4">
                      <select name="category" value={formData.category} onChange={handleInputChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors">
@@ -128,31 +212,30 @@ const ScheduleDonation = () => {
                </div>
 
                <div className="bg-slate-50 border border-slate-200 rounded-lg p-5">
-                <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-3">Packaging Protocol</h4>
+                <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-3">Are you providing packaging ?</h4>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <label className={`flex-1 p-3 rounded-lg border cursor-pointer transition-all flex items-center gap-3 ${formData.packaging === true ? 'bg-emerald-50 border-emerald-500 text-emerald-800' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
                     <input type="radio" name="packaging" value="true" checked={formData.packaging === true} onChange={handleInputChange} className="hidden" />
                     <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${formData.packaging === true ? 'border-emerald-500' : 'border-slate-300'}`}>
                       {formData.packaging === true && <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>}
                     </div>
-                    <span className="text-sm font-semibold">Packaged</span>
+                    <span className="text-sm font-semibold">YES</span>
                   </label>
                   <label className={`flex-1 p-3 rounded-lg border cursor-pointer transition-all flex items-center gap-3 ${formData.packaging === false ? 'bg-emerald-50 border-emerald-500 text-emerald-800' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
                     <input type="radio" name="packaging" value="false" checked={formData.packaging === false} onChange={handleInputChange} className="hidden" />
                     <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${formData.packaging === false ? 'border-emerald-500' : 'border-slate-300'}`}>
                       {formData.packaging === false && <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>}
                     </div>
-                    <span className="text-sm font-semibold">Bulk Transfer</span>
+                    <span className="text-sm font-semibold">NO</span>
                   </label>
                 </div>
                </div>
 
-               <InputWrapper label="Shelf Life / Freshness" icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z">
+               <InputWrapper label="Freshness" icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z">
                   <input type="text" name="shelfLife" required value={formData.shelfLife} onChange={handleInputChange} placeholder="e.g. Needs pickup within 4 hours" className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors placeholder:text-slate-400"/>
                </InputWrapper>
             </section>
 
-            {/* Standard Location Card */}
             <section className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-6">
                <h3 className="text-lg font-semibold text-slate-900 mb-4 border-b border-slate-100 pb-3">Pickup Location</h3>
                <InputWrapper label="Street Address" icon="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z">
@@ -176,12 +259,36 @@ const ScheduleDonation = () => {
                      <input type="text" name="city" required value={formData.city} onChange={handleInputChange} placeholder="e.g. Pune" className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors placeholder:text-slate-400"/>
                   </InputWrapper>
                </div>
+
+               <div className="pt-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                      <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                      Pin Exact Location
+                    </label>
+                    {!mapPosition ? (
+                      <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-200 uppercase tracking-widest animate-pulse">Required</span>
+                    ) : (
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-200 uppercase tracking-widest">Saved</span>
+                    )}
+                  </div>
+                  <div className="h-[300px] w-full rounded-lg overflow-hidden border border-slate-300 relative z-10 shadow-sm">
+                    <MapContainer center={defaultPosition} zoom={mapPosition ? 14 : 5} scrollWheelZoom={true} style={{ height: "100%", width: "100%" }}>
+                      <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap' />
+                      <MapUpdater position={mapPosition} />
+                      <LocationPicker position={mapPosition} setPosition={setMapPosition} lastAction={lastAction} />
+                    </MapContainer>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-2 flex items-center gap-1.5">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Auto-pins to your address. Drag it to adjust the exact gate.
+                  </p>
+               </div>
             </section>
 
-            {/* Restored Point of Contact Card */}
             <section className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-5">
                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-slate-100 pb-3">
-                  <h3 className="text-lg font-semibold text-slate-900">Point of Contact</h3>
+                  <h3 className="text-lg font-semibold text-slate-900">Contact Details</h3>
                   <label className="flex items-center gap-2.5 cursor-pointer group">
                      <div className={`w-4 h-4 rounded flex items-center justify-center transition-colors border ${sameAsProfile ? 'bg-emerald-600 border-emerald-600' : 'bg-white border-slate-300 group-hover:border-emerald-500'}`}>
                         {sameAsProfile && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"/></svg>}
@@ -193,17 +300,43 @@ const ScheduleDonation = () => {
 
                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <InputWrapper label="Contact Name" icon="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z">
-                     <input type="text" name="contactName" required value={formData.contactName} onChange={handleInputChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
+                     <input type="text" name="contactName" required value={formData.contactName} onChange={handleInputChange} disabled={sameAsProfile} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"/>
                   </InputWrapper>
                   <InputWrapper label="Phone Number" icon="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z">
-                     <input type="tel" name="contactPhone" required value={formData.contactPhone} onChange={handleInputChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
+                     <input type="tel" name="contactPhone" required value={formData.contactPhone} onChange={handleInputChange} disabled={sameAsProfile} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"/>
                   </InputWrapper>
                </div>
             </section>
           </div>
 
-          {/* Right Column: Timetable & Submission */}
           <div className="lg:col-span-5 space-y-6">
+
+             {/* Verification Block added for Scheduled Post */}
+             <section className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
+                <div className="p-5 border-b border-slate-100 bg-slate-50/50">
+                  <h3 className="text-base font-semibold text-slate-900">Reference Photo</h3>
+                  <p className="text-xs text-slate-500 mt-1">Upload an image of the typical surplus to build NGO trust.</p>
+                </div>
+                <div className="p-5 bg-white">
+                  <div onClick={() => fileInputRef.current.click()} className={`relative w-full h-40 rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-colors overflow-hidden ${imagePreview ? 'border-emerald-500' : 'border-slate-300 hover:border-emerald-400 group'}`}>
+                    {imagePreview ? (
+                      <>
+                        <img src={imagePreview} className="w-full h-full object-cover" alt="Preview"/>
+                        <div className="absolute inset-0 bg-slate-900/50 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold">Change Photo</div>
+                      </>
+                    ) : (
+                      <div className="text-center">
+                         <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center mx-auto mb-2 text-slate-400 group-hover:text-emerald-500 transition-colors">
+                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                         </div>
+                         <p className="text-xs font-semibold text-slate-700">Click to Upload</p>
+                      </div>
+                    )}
+                  </div>
+                  <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageChange}/>
+                </div>
+             </section>
+
              <section className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
                 <div className="p-5 border-b border-slate-100 bg-slate-50/50">
                   <h3 className="text-base font-semibold text-slate-900">Weekly Configuration</h3>
@@ -217,13 +350,11 @@ const ScheduleDonation = () => {
                            <span className={`text-sm font-semibold transition-colors ${item.isActive ? 'text-emerald-800' : 'text-slate-600'}`}>
                              {item.day}
                            </span>
-                           {/* SaaS Toggle Switch */}
                            <div onClick={() => updateMatrix(idx, 'isActive', !item.isActive)} className={`w-11 h-6 rounded-full p-1 cursor-pointer transition-colors ${item.isActive ? 'bg-emerald-500' : 'bg-slate-200'}`}>
                               <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${item.isActive ? 'translate-x-5' : 'translate-x-0'}`}></div>
                            </div>
                         </div>
 
-                        {/* Inline Time Editors */}
                         {item.isActive && (
                           <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-emerald-100/50 animate-in slide-in-from-top-2 duration-300">
                              <div className="space-y-1.5">
@@ -241,27 +372,13 @@ const ScheduleDonation = () => {
                 </div>
              </section>
 
-             {/* Final Actions Block */}
              <section className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
                 <div className="flex gap-3 items-start mb-5">
                    <svg className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                    <p className="text-xs text-slate-600 leading-relaxed">System will automatically broadcast this surplus to local network based on active days.</p>
                 </div>
-                <button 
-                  type="submit" 
-                  disabled={isSubmitting} 
-                  className={`w-full py-3 rounded-lg font-semibold text-sm shadow-sm transition-all flex items-center justify-center gap-2 ${
-                    isSubmitting ? 'bg-emerald-500 opacity-70 cursor-not-allowed text-white' : 'bg-emerald-600 hover:bg-emerald-700 text-white active:scale-[0.98]'
-                  }`}
-                >
-                  {isSubmitting ? (
-                    <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
-                  ) : (
-                    <>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"/></svg>
-                      Save Weekly Schedule
-                    </>
-                  )}
+                <button type="submit" disabled={isSubmitting} className={`w-full py-3 rounded-lg font-semibold text-sm shadow-sm transition-all flex items-center justify-center gap-2 ${isSubmitting ? 'bg-emerald-500 opacity-70 cursor-not-allowed text-white' : 'bg-emerald-600 hover:bg-emerald-700 text-white active:scale-[0.98]'}`}>
+                  {isSubmitting ? <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div> : <><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"/></svg>Save Weekly Schedule</>}
                 </button>
              </section>
           </div>

@@ -1,14 +1,21 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import toast from 'react-hot-toast';
 import api from '../services/axios';
 import { useLocationAPI } from '../hooks/useLocationAPI';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
-// Fix Leaflet marker icons
+  const HeroIcon = () => (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 2L3 7V17L12 22L21 17V7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M12 22V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M21 7L12 12L3 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+
 const customIcon = new L.Icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -17,14 +24,26 @@ const customIcon = new L.Icon({
   iconAnchor: [12, 41]
 });
 
-const LocationPicker = ({ position, setPosition }) => {
-  useMapEvents({ click(e) { setPosition(e.latlng); } });
-  return position ? (
-    <Marker position={position} icon={customIcon} draggable={true} eventHandlers={{ dragend: (e) => setPosition(e.target.getLatLng()) }} />
-  ) : null;
+// NEW: Auto Map Updater
+const MapUpdater = ({ position }) => {
+  const map = useMap();
+  useEffect(() => {
+    if (position) map.setView(position, 14, { animate: true, duration: 1.5 });
+  }, [position, map]);
+  return null;
 };
 
-// Clean B2B Step Indicator
+// UPDATED: Tracks manual interactions
+const LocationPicker = ({ position, setPosition, lastAction }) => {
+  useMapEvents({
+    click(e) { 
+      if(lastAction) lastAction.current = 'map';
+      setPosition(e.latlng); 
+    },
+  });
+  return position ? <Marker position={position} icon={customIcon} draggable={true} eventHandlers={{ dragstart: () => { if(lastAction) lastAction.current = 'map'; }, dragend: (e) => setPosition(e.target.getLatLng()) }} /> : null;
+};
+
 const ProgressMarker = ({ step, label, active, completed }) => (
   <div className="flex items-center gap-4 group">
     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 ${
@@ -38,7 +57,6 @@ const ProgressMarker = ({ step, label, active, completed }) => (
   </div>
 );
 
-// Clean B2B Input Wrapper
 const InputField = ({ label, name, type = "text", required = true, placeholder, value, onChange }) => (
   <div className="space-y-1.5">
     <label className="block text-sm font-semibold text-slate-700">{label}</label>
@@ -56,6 +74,7 @@ const SignupSupplier = () => {
   const [isDeploying, setIsDeploying] = useState(false);
   
   const [mapPosition, setMapPosition] = useState(null);
+  const lastAction = useRef('init');
 
   const [supplierState, setSupplierState] = useState({
     email: '', password: '', confirmPassword: '',
@@ -64,8 +83,34 @@ const SignupSupplier = () => {
 
   const { states, districts } = useLocationAPI(supplierState.state);
 
+  // NEW: Debounced Auto-Geocoder for Registration
+  useEffect(() => {
+    if (lastAction.current === 'map' || lastAction.current === 'init') return;
+
+    const addressParts = [supplierState.address, supplierState.city, supplierState.district, supplierState.state].filter(Boolean);
+    if (addressParts.length < 2) return; 
+
+    const query = addressParts.join(', ') + ', India';
+
+    const timeoutId = setTimeout(async () => {
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`);
+        const data = await res.json();
+        if (data && data[0] && lastAction.current === 'text') {
+          setMapPosition({ lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) });
+        }
+      } catch (err) { console.error('Auto-geocode failed', err); }
+    }, 1200);
+
+    return () => clearTimeout(timeoutId);
+  }, [supplierState.address, supplierState.city, supplierState.district, supplierState.state]);
+
   const handleUpdate = (e) => {
     const { name, value } = e.target;
+    if (['address', 'city', 'district', 'state'].includes(name)) {
+      lastAction.current = 'text';
+    }
+
     if (name === 'state') setSupplierState(prev => ({ ...prev, state: value, district: '', city: '' }));
     else if (name === 'district') setSupplierState(prev => ({ ...prev, district: value, city: '' }));
     else setSupplierState(prev => ({ ...prev, [name]: value }));
@@ -115,14 +160,11 @@ const SignupSupplier = () => {
   return (
     <div className="min-h-screen bg-slate-50 flex font-sans selection:bg-emerald-100">
       
-      {/* SaaS Sidebar */}
       <aside className="hidden lg:flex w-[400px] xl:w-[480px] bg-slate-900 flex-col p-12 relative overflow-hidden shrink-0 border-r border-slate-800">
         <div className="relative z-10 flex flex-col h-full">
-          {/* Logo */}
           <div className="flex items-center gap-3 mb-16 cursor-pointer group" onClick={() => navigate('/')}>
             <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center shadow-sm">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 21l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-            </div>
+        <HeroIcon />            </div>
             <span className="text-xl font-bold tracking-tight text-white">SurplusShare</span>
           </div>
           
@@ -141,7 +183,6 @@ const SignupSupplier = () => {
 
       <main className="flex-grow flex flex-col items-center justify-center p-4 sm:p-8 lg:p-12 overflow-y-auto">
         
-        {/* Mobile Header */}
         <div className="lg:hidden flex flex-col items-center mb-8 text-center w-full">
           <div className="w-10 h-10 bg-slate-900 text-white rounded-xl flex items-center justify-center mb-3 shadow-sm" onClick={() => navigate('/')}>
              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 21l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
@@ -233,7 +274,7 @@ const SignupSupplier = () => {
                      </div>
                    </div>
 
-                   {/* Clean Map UI */}
+                   {/* Clean Map UI with Auto-Center */}
                    <div>
                      <div className="flex items-center justify-between mb-2">
                        <label className="block text-sm font-semibold text-slate-700">Facility Pin Location</label>
@@ -246,12 +287,13 @@ const SignupSupplier = () => {
                      <div className="h-[220px] w-full rounded-lg overflow-hidden border border-slate-300 relative z-10 shadow-sm">
                        <MapContainer center={[20.5937, 78.9629]} zoom={5} scrollWheelZoom={true} style={{ height: "100%", width: "100%" }}>
                          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap' />
-                         <LocationPicker position={mapPosition} setPosition={setMapPosition} />
+                         <MapUpdater position={mapPosition} />
+                         <LocationPicker position={mapPosition} setPosition={setMapPosition} lastAction={lastAction} />
                        </MapContainer>
                      </div>
                      <p className="text-xs text-slate-500 mt-1.5 flex items-center gap-1.5">
                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                       Drag map pin to your exact loading dock or entrance.
+                       Auto-pins to your address. Drag map pin to your exact loading dock.
                      </p>
                    </div>
                  </div>

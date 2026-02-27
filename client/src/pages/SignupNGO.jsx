@@ -1,12 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import toast from 'react-hot-toast';
 import api from '../services/axios';
 import { useLocationAPI } from '../hooks/useLocationAPI';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+
+  const HeroIcon = () => (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 2L3 7V17L12 22L21 17V7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M12 22V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M21 7L12 12L3 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
 
 // Fix Leaflet marker icons
 const customIcon = new L.Icon({
@@ -17,11 +25,24 @@ const customIcon = new L.Icon({
   iconAnchor: [12, 41]
 });
 
-const LocationPicker = ({ position, setPosition }) => {
-  useMapEvents({ click(e) { setPosition(e.latlng); } });
-  return position ? (
-    <Marker position={position} icon={customIcon} draggable={true} eventHandlers={{ dragend: (e) => setPosition(e.target.getLatLng()) }} />
-  ) : null;
+// NEW: Auto Map Updater
+const MapUpdater = ({ position }) => {
+  const map = useMap();
+  useEffect(() => {
+    if (position) map.setView(position, 14, { animate: true, duration: 1.5 });
+  }, [position, map]);
+  return null;
+};
+
+// UPDATED: Tracks manual interactions
+const LocationPicker = ({ position, setPosition, lastAction }) => {
+  useMapEvents({
+    click(e) { 
+      if(lastAction) lastAction.current = 'map';
+      setPosition(e.latlng); 
+    },
+  });
+  return position ? <Marker position={position} icon={customIcon} draggable={true} eventHandlers={{ dragstart: () => { if(lastAction) lastAction.current = 'map'; }, dragend: (e) => setPosition(e.target.getLatLng()) }} /> : null;
 };
 
 // Clean B2B Step Indicator
@@ -56,6 +77,7 @@ const SignupNGO = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   
   const [mapPosition, setMapPosition] = useState(null);
+  const lastAction = useRef('init');
 
   const [formState, setFormState] = useState({
     email: '', password: '', confirmPassword: '',
@@ -64,8 +86,34 @@ const SignupNGO = () => {
 
   const { states, districts } = useLocationAPI(formState.state);
 
+  // NEW: Debounced Auto-Geocoder for Registration
+  useEffect(() => {
+    if (lastAction.current === 'map' || lastAction.current === 'init') return;
+
+    const addressParts = [formState.address, formState.city, formState.district, formState.state].filter(Boolean);
+    if (addressParts.length < 2) return; 
+
+    const query = addressParts.join(', ') + ', India';
+
+    const timeoutId = setTimeout(async () => {
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`);
+        const data = await res.json();
+        if (data && data[0] && lastAction.current === 'text') {
+          setMapPosition({ lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) });
+        }
+      } catch (err) { console.error('Auto-geocode failed', err); }
+    }, 1200);
+
+    return () => clearTimeout(timeoutId);
+  }, [formState.address, formState.city, formState.district, formState.state]);
+
   const syncInput = (e) => {
     const { name, value } = e.target;
+    if (['address', 'city', 'district', 'state'].includes(name)) {
+      lastAction.current = 'text';
+    }
+
     if (name === 'state') setFormState(prev => ({ ...prev, state: value, district: '', city: '' }));
     else if (name === 'district') setFormState(prev => ({ ...prev, district: value, city: '' }));
     else setFormState(prev => ({ ...prev, [name]: value }));
@@ -122,8 +170,7 @@ const SignupNGO = () => {
           {/* Logo */}
           <div className="flex items-center gap-3 mb-16 cursor-pointer group" onClick={() => navigate('/')}>
             <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
-              <svg className="w-6 h-6 text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 21l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-            </div>
+ <HeroIcon />        </div>
             <span className="text-xl font-bold tracking-tight text-white">SurplusShare</span>
           </div>
           
@@ -239,12 +286,13 @@ const SignupNGO = () => {
                     <div className="h-[220px] w-full rounded-lg overflow-hidden border border-slate-300 relative z-10 shadow-sm">
                       <MapContainer center={[20.5937, 78.9629]} zoom={5} scrollWheelZoom={true} style={{ height: "100%", width: "100%" }}>
                         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap' />
-                        <LocationPicker position={mapPosition} setPosition={setMapPosition} />
+                        <MapUpdater position={mapPosition} />
+                        <LocationPicker position={mapPosition} setPosition={setMapPosition} lastAction={lastAction} />
                       </MapContainer>
                     </div>
                     <p className="text-xs text-slate-500 mt-1.5 flex items-center gap-1.5">
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                      Drag map pin to your exact facility for better matching.
+                      Auto-pins to your address. Drag map pin to your exact facility for better matching.
                     </p>
                   </div>
                 </div>

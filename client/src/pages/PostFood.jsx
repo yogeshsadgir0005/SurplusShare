@@ -4,11 +4,10 @@ import toast from 'react-hot-toast';
 import api from '../services/axios';
 import { useLocationAPI } from '../hooks/useLocationAPI';
 import Layout from '../components/Layout';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
-// Fix Leaflet marker icons
 const customIcon = new L.Icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -17,25 +16,42 @@ const customIcon = new L.Icon({
   iconAnchor: [12, 41]
 });
 
-// Component to handle map clicks and marker dragging
-const LocationPicker = ({ position, setPosition }) => {
+// NEW: Component to smoothly auto-center the map when coords change
+const MapUpdater = ({ position }) => {
+  const map = useMap();
+  useEffect(() => {
+    if (position) {
+      map.setView(position, 14, { animate: true, duration: 0.5 });
+    }
+  }, [position, map]);
+  return null;
+};
+
+// UPDATED: Tracks if the user interacted with the map manually
+const LocationPicker = ({ position, setPosition, lastAction }) => {
   useMapEvents({
-    click(e) { setPosition(e.latlng); },
+    click(e) { 
+      if(lastAction) lastAction.current = 'map';
+      setPosition(e.latlng); 
+    },
   });
   return position ? (
-    <Marker position={position} icon={customIcon} draggable={true} eventHandlers={{ dragend: (e) => setPosition(e.target.getLatLng()) }} />
+    <Marker 
+      position={position} 
+      icon={customIcon} 
+      draggable={true} 
+      eventHandlers={{ 
+        dragstart: () => { if(lastAction) lastAction.current = 'map'; },
+        dragend: (e) => setPosition(e.target.getLatLng()) 
+      }} 
+    />
   ) : null;
 };
 
-// Clean B2B Input Wrapper
 const InputWrapper = ({ label, children, icon }) => (
   <div className="space-y-1.5">
     <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-      {icon && (
-        <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={icon}/>
-        </svg>
-      )}
+      {icon && <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={icon}/></svg>}
       {label}
     </label>
     {children}
@@ -51,7 +67,9 @@ const PostFood = () => {
   const [imageFile, setImageFile] = useState(null);
   const [sameAsProfile, setSameAsProfile] = useState(false);
 
-  // Default Map center (India), or user's saved location
+  // NEW: Ref to track interaction source (prevents text-geocode from overriding manual map drags)
+  const lastAction = useRef('init'); 
+
   const defaultPosition = (user?.supplierDetails?.lat && user?.supplierDetails?.lng) 
     ? { lat: user.supplierDetails.lat, lng: user.supplierDetails.lng } 
     : { lat: 20.5937, lng: 78.9629 };
@@ -61,20 +79,8 @@ const PostFood = () => {
   );
 
   const [formData, setFormData] = useState({
-    type: 'OneTime', 
-    weight: '', 
-    packaging: true, 
-    pickupAddress: '', 
-    city: '', 
-    district: '', 
-    state: '',
-    shelfLife: '', 
-    category: 'Prepared Meals', 
-    pickupDate: '', 
-    pickupTime: '', 
-    contactName: '', 
-    contactPhone: '', 
-    specialInstructions: ''
+    type: 'OneTime', weight: '', packaging: true, pickupAddress: '', city: '', district: '', state: '',
+    shelfLife: '', category: 'Prepared Meals', pickupDate: '', pickupTime: '', contactName: '', contactPhone: '', specialInstructions: ''
   });
 
   const { states, districts } = useLocationAPI(formData.state);
@@ -91,8 +97,37 @@ const PostFood = () => {
     }
   }, []);
 
+  // NEW: Auto-Geocoding Effect
+  useEffect(() => {
+    if (lastAction.current === 'map' || lastAction.current === 'init') return;
+
+    const addressParts = [formData.pickupAddress, formData.city, formData.district, formData.state].filter(Boolean);
+    if (addressParts.length < 2) return; // Need at least some details to search
+
+    const query = addressParts.join(', ') + ', India';
+
+    // Debounce the API call by 1.2s so it doesn't fire on every single keystroke
+    const timeoutId = setTimeout(async () => {
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`);
+        const data = await res.json();
+        // Only update if the user hasn't touched the map in the meantime
+        if (data && data[0] && lastAction.current === 'text') {
+          setMapPosition({ lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) });
+        }
+      } catch (err) { console.error('Auto-geocode failed', err); }
+    }, 1200);
+
+    return () => clearTimeout(timeoutId);
+  }, [formData.pickupAddress, formData.city, formData.district, formData.state]);
+
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
+    // Flag that a text field was modified
+    if (['pickupAddress', 'city', 'district', 'state'].includes(name)) {
+      lastAction.current = 'text';
+    }
+    
     if (name === 'state') setFormData(prev => ({ ...prev, state: value, district: '', city: '' }));
     else if (name === 'district') setFormData(prev => ({ ...prev, district: value, city: '' }));
     else setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : (value === 'true' ? true : value === 'false' ? false : value) }));
@@ -123,17 +158,17 @@ const PostFood = () => {
     e.preventDefault();
     if (!imageFile) return toast.error('Product verification photo required');
     if (!mapPosition) return toast.error('Please click the map to pin the exact pickup location. (Required)');
+    if (!formData.contactName?.trim() || !formData.contactPhone?.trim()) return toast.error('Contact details are missing.');
     
     setIsSubmitting(true);
     try {
       const submission = new FormData();
       Object.keys(formData).forEach(key => submission.append(key, formData[key]));
       submission.append('image', imageFile);
-      
       submission.append('lat', mapPosition.lat);
       submission.append('lng', mapPosition.lng);
 
-      await api.post('/posts', submission, { headers: { 'Content-Type': 'multipart/form-data' } });
+      await api.post('/posts', submission);
       toast.success('Surplus Released to Network');
       navigate('/supplier/dashboard');
     } catch (err) {
@@ -146,8 +181,6 @@ const PostFood = () => {
   return (
     <Layout role="Supplier">
       <div className="max-w-6xl mx-auto space-y-8">
-        
-        {/* Sleek Header */}
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-5">
           <div>
             <div className="flex items-center gap-2 text-xs font-medium text-slate-500 mb-1">
@@ -155,36 +188,28 @@ const PostFood = () => {
               <span>/</span>
               <span className="text-emerald-600">New Release</span>
             </div>
-            <h1 className="text-2xl font-bold text-slate-900">Initialize Food Release</h1>
+            <h1 className="text-2xl font-bold text-slate-900">Post Food Drop</h1>
           </div>
         </header>
 
         <form onSubmit={executePost} className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-          
-          {/* Left Column: Form Fields */}
           <div className="lg:col-span-2 space-y-6">
             
-            {/* Logistics Configuration Card */}
             <section className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-6">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4 border-b border-slate-100 pb-3">Logistics Details</h3>
-              
+              <h3 className="text-lg font-semibold text-slate-900 mb-4 border-b border-slate-100 pb-3">Food Details</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <InputWrapper label="Category" icon="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4">
                   <select name="category" value={formData.category} onChange={handleInputChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors">
-                    <option>Prepared Meals</option>
-                    <option>Bakery/Grains</option>
-                    <option>Produce</option>
-                    <option>Dairy</option>
-                    <option>Meat/Protein</option>
+                    <option>Prepared Meals</option><option>Bakery/Grains</option><option>Produce</option><option>Dairy</option><option>Meat/Protein</option>
                   </select>
                 </InputWrapper>
                 <InputWrapper label="Total Volume (kg)" icon="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3">
-                  <input type="number" step="0.1" name="weight" required value={formData.weight} onChange={handleInputChange} placeholder="0.0" className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors placeholder:text-slate-400"/>
+                  <input type="number" step="0.1" name="weight" required value={formData.weight} onChange={handleInputChange} placeholder="0.0" className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
                 </InputWrapper>
               </div>
 
               <div className="bg-slate-50 border border-slate-200 rounded-lg p-5">
-                <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-3">Packaging Protocol</h4>
+                <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-3">Will you provide packaging ?</h4>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <label className={`flex-1 p-3 rounded-lg border cursor-pointer transition-all flex items-center gap-3 ${formData.packaging === true ? 'bg-emerald-50 border-emerald-500 text-emerald-800' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
                     <input type="radio" name="packaging" value="true" checked={formData.packaging === true} onChange={handleInputChange} className="hidden" />
@@ -203,28 +228,25 @@ const PostFood = () => {
                 </div>
               </div>
 
-              <InputWrapper label="Shelf Life / Freshness" icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z">
-                 <input type="text" name="shelfLife" required value={formData.shelfLife} onChange={handleInputChange} placeholder="e.g. Needs pickup within 4 hours" className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors placeholder:text-slate-400"/>
+              <InputWrapper label="Freshness" icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z">
+                 <input type="text" name="shelfLife" required value={formData.shelfLife} onChange={handleInputChange} placeholder="e.g. Needs pickup within 4 hours" className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
               </InputWrapper>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 border-t border-slate-100 pt-5">
-                <InputWrapper label="Scheduled Date" icon="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                <InputWrapper label="Pickup Deadline" icon="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
                   <input type="date" name="pickupDate" required value={formData.pickupDate} onChange={handleInputChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
                 </InputWrapper>
-                <InputWrapper label="Time Window" icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z">
+                <InputWrapper label="Pickup Time" icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z">
                   <input type="time" name="pickupTime" required value={formData.pickupTime} onChange={handleInputChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
                 </InputWrapper>
               </div>
             </section>
 
-            {/* Location Section with Map */}
             <section className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-6">
                <h3 className="text-lg font-semibold text-slate-900 mb-4 border-b border-slate-100 pb-3">Pickup Location</h3>
-               
                <InputWrapper label="Street Address" icon="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z">
-                  <input type="text" name="pickupAddress" required value={formData.pickupAddress} onChange={handleInputChange} placeholder="Full building address..." className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors placeholder:text-slate-400"/>
+                  <input type="text" name="pickupAddress" required value={formData.pickupAddress} onChange={handleInputChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
                </InputWrapper>
-               
                <div className="grid grid-cols-1 md:grid-cols-3 gap-5 bg-slate-50 border border-slate-200 p-5 rounded-lg">
                   <InputWrapper label="State">
                      <select name="state" required value={formData.state} onChange={handleInputChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors cursor-pointer">
@@ -239,11 +261,10 @@ const PostFood = () => {
                      </select>
                   </InputWrapper>
                   <InputWrapper label="City / Town">
-                     <input type="text" name="city" required value={formData.city} onChange={handleInputChange} placeholder="e.g. Pune" className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors placeholder:text-slate-400"/>
+                     <input type="text" name="city" required value={formData.city} onChange={handleInputChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
                   </InputWrapper>
                </div>
 
-               {/* Map Pinning Utility */}
                <div className="pt-2">
                   <div className="flex items-center justify-between mb-2">
                     <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
@@ -259,30 +280,35 @@ const PostFood = () => {
                   <div className="h-[300px] w-full rounded-lg overflow-hidden border border-slate-300 relative z-10 shadow-sm">
                     <MapContainer center={defaultPosition} zoom={mapPosition ? 14 : 5} scrollWheelZoom={true} style={{ height: "100%", width: "100%" }}>
                       <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap' />
-                      <LocationPicker position={mapPosition} setPosition={setMapPosition} />
+                      <MapUpdater position={mapPosition} />
+                      <LocationPicker position={mapPosition} setPosition={setMapPosition} lastAction={lastAction} />
                     </MapContainer>
                   </div>
                   <p className="text-xs text-slate-500 mt-2 flex items-center gap-1.5">
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    Click the map to place a pin, then drag it to your exact gate or loading dock.
+                    Auto-pins to your address. Drag it to adjust the exact gate or loading dock.
                   </p>
                </div>
             </section>
 
-            {/* Contact Details Section */}
             <section className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-5">
                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-slate-100 pb-3">
-                  <h3 className="text-lg font-semibold text-slate-900">Point of Contact</h3>
-                  
-                 
+                  <h3 className="text-lg font-semibold text-slate-900">Contact Details</h3>
+                  <label className="flex items-center gap-2.5 cursor-pointer group">
+                     <div className={`w-4 h-4 rounded flex items-center justify-center transition-colors border ${sameAsProfile ? 'bg-emerald-600 border-emerald-600' : 'bg-white border-slate-300 group-hover:border-emerald-500'}`}>
+                        {sameAsProfile && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"/></svg>}
+                     </div>
+                     <input type="checkbox" checked={sameAsProfile} onChange={toggleSameAsProfile} className="hidden"/>
+                     <span className="text-sm font-medium text-slate-600 group-hover:text-slate-900">Use profile defaults</span>
+                  </label>
                </div>
 
                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <InputWrapper label="Contact Name" icon="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z">
-                     <input type="text" name="contactName" required value={formData.contactName} onChange={handleInputChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
+                     <input type="text" name="contactName" required value={formData.contactName} onChange={handleInputChange} disabled={sameAsProfile} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed disabled:border-slate-200"/>
                   </InputWrapper>
                   <InputWrapper label="Phone Number" icon="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z">
-                     <input type="tel" name="contactPhone" required value={formData.contactPhone} onChange={handleInputChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
+                     <input type="tel" name="contactPhone" required value={formData.contactPhone} onChange={handleInputChange} disabled={sameAsProfile} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed disabled:border-slate-200"/>
                   </InputWrapper>
                </div>
                
@@ -292,10 +318,7 @@ const PostFood = () => {
             </section>
           </div>
 
-          {/* Right Column: Photo & Submit */}
           <div className="lg:col-span-1 space-y-6">
-             
-             {/* Verification Block */}
              <section className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
                 <div className="p-5 border-b border-slate-100">
                   <h3 className="text-base font-semibold text-slate-900">Food Verification</h3>
@@ -315,9 +338,7 @@ const PostFood = () => {
                     ) : (
                       <div className="text-center px-4">
                          <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center mx-auto mb-3 text-slate-400 group-hover:text-emerald-500 group-hover:bg-emerald-100/50 transition-colors">
-                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
-                           </svg>
+                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
                          </div>
                          <p className="text-sm font-semibold text-slate-700 mb-1">Click to Upload</p>
                          <p className="text-xs text-slate-500">Max size: 5MB</p>
@@ -328,7 +349,6 @@ const PostFood = () => {
                 </div>
              </section>
 
-             {/* Final Actions Block */}
              <section className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
                 <div className="space-y-3 mb-6">
                    <div className="flex gap-3 items-start">
@@ -341,21 +361,8 @@ const PostFood = () => {
                    </div>
                 </div>
 
-                <button 
-                  type="submit" 
-                  disabled={isSubmitting} 
-                  className={`w-full py-3 rounded-lg font-semibold text-sm shadow-sm transition-all flex items-center justify-center gap-2 ${
-                    isSubmitting ? 'bg-emerald-500 opacity-70 cursor-not-allowed text-white' : 'bg-emerald-600 hover:bg-emerald-700 text-white active:scale-[0.98]'
-                  }`}
-                >
-                  {isSubmitting ? (
-                    <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
-                  ) : (
-                    <>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
-                      Release to Network
-                    </>
-                  )}
+                <button type="submit" disabled={isSubmitting} className={`w-full py-3 rounded-lg font-semibold text-sm shadow-sm transition-all flex items-center justify-center gap-2 ${isSubmitting ? 'bg-emerald-500 opacity-70 cursor-not-allowed text-white' : 'bg-emerald-600 hover:bg-emerald-700 text-white active:scale-[0.98]'}`}>
+                  {isSubmitting ? <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div> : <><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>Post Food drop</>}
                 </button>
              </section>
           </div>

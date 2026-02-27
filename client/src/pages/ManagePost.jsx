@@ -1,19 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import api from '../services/axios';
+import api, { API_BASE_URL } from '../services/axios';
 import { useLocationAPI } from '../hooks/useLocationAPI';
 import Layout from '../components/Layout';
 
-// Clean B2B Input Wrapper
 const InputWrapper = ({ label, children, icon }) => (
   <div className="space-y-1.5">
     <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-      {icon && (
-        <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={icon}/>
-        </svg>
-      )}
+      {icon && <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={icon}/></svg>}
       {label}
     </label>
     {children}
@@ -23,11 +18,19 @@ const InputWrapper = ({ label, children, icon }) => (
 const ManagePost = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const fileInputRef = useRef(null);
+  
   const [post, setPost] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [actionLocked, setActionLocked] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  
   const [editForm, setEditForm] = useState({});
+  const [editScheduleMatrix, setEditScheduleMatrix] = useState([]);
+  
+  // New Image States
+  const [imagePreview, setImagePreview] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
 
   const { states, districts } = useLocationAPI(editForm.state);
 
@@ -38,6 +41,13 @@ const ManagePost = () => {
         const currentPost = data.find(p => p._id === id);
         setPost(currentPost);
         setEditForm(currentPost);
+        
+        if (currentPost?.image) {
+           setImagePreview(`${API_BASE_URL}${currentPost.image}`);
+        }
+        if (currentPost?.type === 'Scheduled') {
+          setEditScheduleMatrix(currentPost.scheduledDays || []);
+        }
       } catch (error) {
         toast.error('Failed to load details');
       } finally {
@@ -80,18 +90,61 @@ const ManagePost = () => {
     else setEditForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : (value === 'true' ? true : value === 'false' ? false : value) }));
   };
 
+  const updateMatrix = (idx, field, value) => {
+    const nextMatrix = [...editScheduleMatrix];
+    nextMatrix[idx][field] = value;
+    setEditScheduleMatrix(nextMatrix);
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) return toast.error('File exceeds 5MB limit');
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setImagePreview(reader.result);
+      reader.readAsDataURL(file);
+    }
+  };
+
   const saveEdits = async () => {
     setActionLocked(true);
     try {
-      const { data } = await api.put(`/posts/${id}`, editForm);
+      const payload = new FormData();
+      const updatableFields = ['weight', 'packaging', 'pickupAddress', 'city', 'district', 'state', 'shelfLife', 'category', 'pickupDate', 'pickupTime', 'contactName', 'contactPhone', 'specialInstructions'];
+      
+      updatableFields.forEach(field => {
+         if (editForm[field] !== undefined && editForm[field] !== null) {
+            payload.append(field, editForm[field]);
+         }
+      });
+
+      if (post.type === 'Scheduled') {
+         payload.append('scheduledDays', JSON.stringify(editScheduleMatrix));
+      }
+      
+      if (imageFile) {
+         payload.append('image', imageFile);
+      }
+
+      const { data } = await api.put(`/posts/${id}`, payload, { headers: { 'Content-Type': 'multipart/form-data' } });
       setPost(data);
       setIsEditing(false);
+      setImageFile(null); // Clear file out of state after saving
       toast.success('Post Updated Successfully');
     } catch (error) {
       toast.error('Failed to update post');
     } finally {
       setActionLocked(false);
     }
+  };
+
+  const cancelEdits = () => {
+    setIsEditing(false);
+    setEditForm(post);
+    setEditScheduleMatrix(post.scheduledDays || []);
+    setImagePreview(post.image ? `${API_BASE_URL}${post.image}` : null);
+    setImageFile(null);
   };
 
   if (isLoading || !post) {
@@ -117,8 +170,6 @@ const ManagePost = () => {
   return (
     <Layout role="Supplier">
       <div className="max-w-6xl mx-auto space-y-8">
-        
-        {/* Sleek Header */}
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-5">
           <div>
             <div className="flex items-center gap-2 text-xs font-medium text-slate-500 mb-1">
@@ -126,7 +177,7 @@ const ManagePost = () => {
               <span>/</span>
               <span className="font-mono text-slate-400">{post._id}</span>
             </div>
-            <h1 className="text-2xl font-bold text-slate-900">Manage Post</h1>
+            <h1 className="text-2xl font-bold text-slate-900">{post.type === 'Scheduled' ? 'Manage Schedule' : 'Manage Post'}</h1>
           </div>
           
           <div className="flex flex-wrap items-center gap-3">
@@ -142,7 +193,7 @@ const ManagePost = () => {
             )}
             {isEditing && (
               <div className="flex gap-2">
-                <button onClick={() => {setIsEditing(false); setEditForm(post);}} className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors shadow-sm">
+                <button onClick={cancelEdits} className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors shadow-sm">
                   Cancel
                 </button>
                 <button onClick={saveEdits} disabled={actionLocked} className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors shadow-sm flex items-center gap-2">
@@ -154,13 +205,10 @@ const ManagePost = () => {
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-          
-          {/* Left Column: Logistics & Claims (2/3 width) */}
           <div className="lg:col-span-2 space-y-6 lg:space-y-8">
              
-             {/* Food Details Section */}
              <section className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
-                <h3 className="text-lg font-semibold text-slate-900 mb-6 border-b border-slate-100 pb-3">Food & Logistics</h3>
+                <h3 className="text-lg font-semibold text-slate-900 mb-6 border-b border-slate-100 pb-3">Food Drop Details</h3>
                 
                 {isEditing ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -174,17 +222,21 @@ const ManagePost = () => {
                      </InputWrapper>
                      
                      <div className="sm:col-span-2">
-                        <InputWrapper label="Shelf Life" icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z">
+                        <InputWrapper label="Food Life" icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z">
                            <input type="text" name="shelfLife" value={editForm.shelfLife || ''} onChange={handleEditChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
                         </InputWrapper>
                      </div>
 
-                     <InputWrapper label="Pickup Date" icon="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
-                        <input type="date" name="pickupDate" value={editForm.pickupDate || ''} onChange={handleEditChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
-                     </InputWrapper>
-                     <InputWrapper label="Pickup Time" icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z">
-                        <input type="time" name="pickupTime" value={editForm.pickupTime || ''} onChange={handleEditChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
-                     </InputWrapper>
+                     {post.type === 'OneTime' && (
+                       <>
+                         <InputWrapper label="Pickup Date" icon="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                            <input type="date" name="pickupDate" value={editForm.pickupDate || ''} onChange={handleEditChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
+                         </InputWrapper>
+                         <InputWrapper label="Pickup Time" icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z">
+                            <input type="time" name="pickupTime" value={editForm.pickupTime || ''} onChange={handleEditChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
+                         </InputWrapper>
+                       </>
+                     )}
                      
                      <div className="sm:col-span-2 bg-slate-50 border border-slate-200 rounded-lg p-4 mt-2">
                         <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-3">Packaging Protocol</h4>
@@ -237,7 +289,7 @@ const ManagePost = () => {
                          { label: "Category", value: post.category, icon: "M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" },
                          { label: "Total Volume", value: `${post.weight} kg`, icon: "M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" },
                          { label: "Packaging", value: post.packaging ? "Packaged" : "Bulk Transfer", icon: "M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" },
-                         { label: "Scheduled Slot", value: post.type === 'Scheduled' ? 'Daily Setup' : `${post.pickupDate || 'ASAP'} ${post.pickupTime || ''}`, icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" }
+                         { label: "Scheduled Slot", value: post.type === 'Scheduled' ? 'Weekly Active Schedule' : `${post.pickupDate || 'ASAP'} ${post.pickupTime || ''}`, icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" }
                        ].map((item, idx) => (
                          <div key={idx} className="flex flex-col">
                             <div className="flex items-center gap-1.5 text-slate-500 mb-1">
@@ -263,7 +315,53 @@ const ManagePost = () => {
                 )}
              </section>
 
-             {/* CRM Style Claims List */}
+             {post.type === 'Scheduled' && (
+               <section className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
+                  <div className="p-5 border-b border-slate-200 bg-slate-50/50 flex items-center justify-between">
+                     <div>
+                       <h3 className="text-base font-semibold text-slate-900">Schedule Timetable</h3>
+                       <p className="text-xs text-slate-500 mt-0.5">{isEditing ? 'Modify your active days below.' : 'Currently active broadcast days.'}</p>
+                     </div>
+                  </div>
+                  <div className="divide-y divide-slate-100">
+                     {(isEditing ? editScheduleMatrix : post.scheduledDays).map((item, idx) => (
+                       <div key={item.day} className={`p-4 transition-colors ${item.isActive ? 'bg-emerald-50/20' : 'bg-white'}`}>
+                          <div className="flex items-center justify-between">
+                             <span className={`text-sm font-semibold transition-colors ${item.isActive ? 'text-emerald-800' : 'text-slate-400'}`}>
+                               {item.day}
+                             </span>
+                             {isEditing && (
+                               <div onClick={() => updateMatrix(idx, 'isActive', !item.isActive)} className={`w-10 h-5 rounded-full p-1 cursor-pointer transition-colors ${item.isActive ? 'bg-emerald-500' : 'bg-slate-200'}`}>
+                                  <div className={`w-3 h-3 bg-white rounded-full shadow-sm transition-transform ${item.isActive ? 'translate-x-5' : 'translate-x-0'}`}></div>
+                               </div>
+                             )}
+                          </div>
+                          {item.isActive && (
+                            <div className="grid grid-cols-2 gap-4 mt-3 pt-3 border-t border-emerald-100/50">
+                               <div className="space-y-1">
+                                  <label className="text-[10px] font-semibold text-emerald-700 uppercase tracking-wide">Release</label>
+                                  {isEditing ? (
+                                    <input type="time" value={item.postTime} onChange={(e) => updateMatrix(idx, 'postTime', e.target.value)} className="w-full bg-white border border-emerald-200 rounded-md px-2 py-1 text-sm font-medium text-slate-900 outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"/>
+                                  ) : (
+                                    <p className="text-sm font-medium text-slate-800">{item.postTime}</p>
+                                  )}
+                               </div>
+                               <div className="space-y-1">
+                                  <label className="text-[10px] font-semibold text-emerald-700 uppercase tracking-wide">Deadline</label>
+                                  {isEditing ? (
+                                    <input type="time" value={item.deadlineTime} onChange={(e) => updateMatrix(idx, 'deadlineTime', e.target.value)} className="w-full bg-white border border-emerald-200 rounded-md px-2 py-1 text-sm font-medium text-slate-900 outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"/>
+                                  ) : (
+                                    <p className="text-sm font-medium text-slate-800">{item.deadlineTime}</p>
+                                  )}
+                               </div>
+                            </div>
+                          )}
+                       </div>
+                     ))}
+                  </div>
+               </section>
+             )}
+
              <section className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
                 <div className="p-5 border-b border-slate-200 bg-slate-50/50 flex items-center justify-between">
                   <div>
@@ -296,24 +394,10 @@ const ManagePost = () => {
                                </div>
                             </div>
                          </div>
-
-                         {/* Action Buttons for Pending Claims */}
                          {claim.status === 'Pending' && post.status === 'Active' && (
                            <div className="flex gap-2 w-full sm:w-auto">
-                              <button 
-                                onClick={() => processClaimHandshake(claim._id, 'Rejected')} 
-                                disabled={actionLocked} 
-                                className="flex-1 sm:flex-none px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg text-xs font-semibold hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition-colors"
-                              >
-                                Reject
-                              </button>
-                              <button 
-                                onClick={() => processClaimHandshake(claim._id, 'Approved')} 
-                                disabled={actionLocked} 
-                                className="flex-1 sm:flex-none px-4 py-2 bg-emerald-600 text-white rounded-lg text-xs font-semibold hover:bg-emerald-700 transition-colors shadow-sm"
-                              >
-                                Approve
-                              </button>
+                              <button onClick={() => processClaimHandshake(claim._id, 'Rejected')} disabled={actionLocked} className="flex-1 sm:flex-none px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg text-xs font-semibold hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition-colors">Reject</button>
+                              <button onClick={() => processClaimHandshake(claim._id, 'Approved')} disabled={actionLocked} className="flex-1 sm:flex-none px-4 py-2 bg-emerald-600 text-white rounded-lg text-xs font-semibold hover:bg-emerald-700 transition-colors shadow-sm">Approve</button>
                            </div>
                          )}
                       </div>
@@ -330,13 +414,47 @@ const ManagePost = () => {
              </section>
           </div>
 
-          {/* Right Column: Actions & Contact (1/3 width) */}
           <div className="lg:col-span-1 space-y-6 lg:space-y-8">
              
-             {/* Contact Person Card */}
+             {/* NEW EDITABLE IMAGE UI */}
+             <section className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
+                <div className="p-5 border-b border-slate-100 bg-slate-50/50">
+                  <h3 className="text-base font-semibold text-slate-900">Reference Photo</h3>
+                </div>
+                <div className="p-5 bg-white">
+                  {isEditing ? (
+                     <>
+                       <div onClick={() => fileInputRef.current.click()} className={`relative w-full h-48 rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-colors overflow-hidden ${imagePreview ? 'border-emerald-500' : 'border-slate-300 hover:border-emerald-400 group'}`}>
+                         {imagePreview ? (
+                           <>
+                             <img src={imagePreview} className="w-full h-full object-cover" alt="Preview"/>
+                             <div className="absolute inset-0 bg-slate-900/50 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center text-white text-sm font-semibold">Change Photo</div>
+                           </>
+                         ) : (
+                           <div className="text-center">
+                              <p className="text-sm font-semibold text-slate-700">Click to Upload</p>
+                           </div>
+                         )}
+                       </div>
+                       <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageChange}/>
+                     </>
+                  ) : (
+                     <div className="relative w-full h-48 rounded-lg overflow-hidden bg-slate-100 border border-slate-200">
+                        {post.image ? (
+                           <img src={`${API_BASE_URL}${post.image}`} className="w-full h-full object-cover" alt="Food Verification"/>
+                        ) : (
+                           <div className="h-full flex flex-col items-center justify-center text-slate-400 p-4 text-center">
+                             <svg className="w-8 h-8 mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                             <span className="text-xs font-medium">No image provided</span>
+                           </div>
+                        )}
+                     </div>
+                  )}
+                </div>
+             </section>
+
              <section className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
-                <h4 className="text-sm font-semibold text-slate-900 mb-4 border-b border-slate-100 pb-3">Point of Contact</h4>
-                
+                <h4 className="text-sm font-semibold text-slate-900 mb-4 border-b border-slate-100 pb-3">Contact Details</h4>
                 {isEditing ? (
                   <div className="space-y-4">
                      <InputWrapper label="Contact Name">
@@ -352,7 +470,7 @@ const ManagePost = () => {
                 ) : (
                   <div className="space-y-4">
                     <div className="flex items-center gap-3">
-                       <div className="w-10 h-10 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-sm shrink-0">
+                       <div className="w-10 h-10 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center  justify-center text-emerald-700 font-bold text-sm shrink-0">
                          {post.contactName?.charAt(0)}
                        </div>
                        <div className="min-w-0">
@@ -362,7 +480,7 @@ const ManagePost = () => {
                     </div>
                     <div className="pt-4 border-t border-slate-100 space-y-4">
                        <div>
-                          <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide block mb-1">Direct Line</span>
+                          <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide block mb-1">Contact no.</span>
                           <p className="text-sm font-semibold text-slate-900">{post.contactPhone}</p>
                        </div>
                        {post.specialInstructions && (
@@ -376,7 +494,6 @@ const ManagePost = () => {
                 )}
              </section>
 
-             {/* Danger Zone / Status Management */}
              <section className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
                 <div className="p-5 border-b border-slate-100 bg-rose-50/30">
                   <h4 className="text-sm font-semibold text-rose-800 flex items-center gap-2">
@@ -384,27 +501,13 @@ const ManagePost = () => {
                     Manual Override
                   </h4>
                 </div>
-                
                 <div className="p-5 space-y-4">
-                   <p className="text-xs text-slate-600 leading-relaxed mb-2">
-                     Manually updating the status skips standard tracking. Used only if food is disposed of or picked up outside the app.
-                   </p>
-                   
-                   <button 
-                     onClick={() => modifyStatus('Claimed')} 
-                     disabled={actionLocked || post.status !== 'Active'} 
-                     className="w-full py-2.5 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 hover:border-slate-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm"
-                   >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"/></svg>
-                      Force Claimed
+                   <p className="text-xs text-slate-600 leading-relaxed mb-2">Manually updating the status skips standard tracking. Used only if food is disposed of or picked up outside the app.</p>
+                   <button onClick={() => modifyStatus('Claimed')} disabled={actionLocked || post.status !== 'Active'} className="w-full py-2.5 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 hover:border-slate-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"/></svg> Force Claimed
                    </button>
-                   <button 
-                     onClick={() => modifyStatus('Expired')} 
-                     disabled={actionLocked || post.status !== 'Active'} 
-                     className="w-full py-2.5 bg-white border border-rose-200 text-rose-600 rounded-lg text-sm font-semibold hover:bg-rose-50 hover:border-rose-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm"
-                   >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                      Mark as Expired
+                   <button onClick={() => modifyStatus('Expired')} disabled={actionLocked || post.status !== 'Active'} className="w-full py-2.5 bg-white border border-rose-200 text-rose-600 rounded-lg text-sm font-semibold hover:bg-rose-50 hover:border-rose-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg> Mark as Expired
                    </button>
                 </div>
              </section>

@@ -70,7 +70,6 @@ const createPost = async (req, res) => {
   const image = req.file ? `/uploads/${req.file.filename}` : '';
 
   try {
-    // USE MAP PIN COORDS IF PROVIDED (Form Data sends them as strings)
     let finalLat = req.body.lat;
     let finalLng = req.body.lng;
 
@@ -81,11 +80,10 @@ const createPost = async (req, res) => {
     }
 
     const post = new Post({
-      supplierId: req.user._id, type, weight, packaging, pickupAddress, 
-      city, district, state, lat: finalLat, lng: finalLng, 
-      shelfLife, category, image, pickupDate, pickupTime, 
+      supplierId: req.user._id, type, weight, packaging, pickupAddress, city, district, state, 
+      lat: finalLat, lng: finalLng, shelfLife, category, image, pickupDate, pickupTime, 
       contactName, contactPhone, specialInstructions, 
-      scheduledDays: scheduledDays ? JSON.parse(scheduledDays) : []
+      scheduledDays: typeof scheduledDays === 'string' ? JSON.parse(scheduledDays) : (scheduledDays || [])
     });
     const createdPost = await post.save();
     res.status(201).json(createdPost);
@@ -99,17 +97,32 @@ const getActivePosts = async (req, res) => {
     const user = await User.findById(req.user._id);
     const posts = await Post.find({ status: 'Active' }).populate('supplierId', 'supplierDetails.legalName').lean();
 
+    // DYNAMIC FILTERING FOR SCHEDULED POSTS (Bug 1 Fix)
+    const now = new Date();
+    const currentDay = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long' }).format(now);
+    const currentTime = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: false }).format(now);
+
+    const validPosts = posts.filter(p => {
+      if (p.type === 'OneTime') return true;
+      if (p.type === 'Scheduled') {
+         const todaySchedule = p.scheduledDays?.find(d => d.day === currentDay && d.isActive);
+         if (!todaySchedule) return false;
+         // It only shows up if the current time is between the release time and the deadline time
+         if (currentTime >= todaySchedule.postTime && currentTime <= todaySchedule.deadlineTime) return true;
+         return false;
+      }
+      return false;
+    });
+
     const ngoLat = user.ngoDetails?.lat;
     const ngoLng = user.ngoDetails?.lng;
     const ngoState = user.ngoDetails?.state || '';
     const ngoDistrict = user.ngoDetails?.district || '';
     const ngoCity = user.ngoDetails?.city || '';
 
-    const postsWithDistance = posts.map(p => {
+    const postsWithDistance = validPosts.map(p => {
       let distance = null;
-      if (ngoLat && ngoLng && p.lat && p.lng) {
-        distance = getDistanceFromLatLonInKm(ngoLat, ngoLng, p.lat, p.lng);
-      }
+      if (ngoLat && ngoLng && p.lat && p.lng) distance = getDistanceFromLatLonInKm(ngoLat, ngoLng, p.lat, p.lng);
       return { ...p, distance };
     });
 
@@ -164,6 +177,16 @@ const updatePost = async (req, res) => {
           post[field] = req.body[field];
         }
       });
+
+      // Handle parsing stringified array from FormData
+      if (req.body.scheduledDays) {
+         post.scheduledDays = typeof req.body.scheduledDays === 'string' ? JSON.parse(req.body.scheduledDays) : req.body.scheduledDays;
+      }
+
+      // Handle new image upload
+      if (req.file) {
+         post.image = `/uploads/${req.file.filename}`;
+      }
 
       if (locationChanged) {
         const coords = await geocodeLocation(post.pickupAddress, post.city, post.state);
@@ -233,8 +256,6 @@ const getSupplierDashboardMetrics = async (req, res) => {
 const getNgoDashboardMetrics = async (req, res) => {
   try {
     const ngoId = req.user._id;
-    
-    // Calculate Stats (Existing Logic remains the same)
     const allNgoPosts = await Post.find({ "claims.ngoId": ngoId });
     let savedKgs = 0, activeClaims = 0;
 
@@ -248,7 +269,6 @@ const getNgoDashboardMetrics = async (req, res) => {
 
     const mealsProvided = Math.floor((savedKgs * 1000) / 400);
 
-    // Date formatter helper
     const timeSince = (date) => {
       const seconds = Math.floor((new Date() - date) / 1000);
       let interval = seconds / 86400; if (interval > 1) return Math.floor(interval) + " days ago";
@@ -257,16 +277,13 @@ const getNgoDashboardMetrics = async (req, res) => {
       return "Just now";
     };
 
-    // BUG FIX: Filter the feed to ONLY show posts where THIS NGO has interacted (claimed)
     const interactionHistory = await Post.find({ "claims.ngoId": ngoId })
-      .sort({ updatedAt: -1 }) // Sort by most recent interaction
+      .sort({ updatedAt: -1 })
       .limit(10)
       .populate('supplierId', 'supplierDetails.legalName');
     
     const feed = interactionHistory.map(post => {
       const myClaim = post.claims.find(c => c.ngoId.toString() === ngoId.toString());
-      
-      // Determine professional action text based on claim status
       let actionText = "";
       if (myClaim.status === 'Pending') actionText = `Requested ${post.weight}kg of ${post.category}`;
       else if (myClaim.status === 'Approved') actionText = `Claim approved for ${post.weight}kg`;
@@ -276,15 +293,12 @@ const getNgoDashboardMetrics = async (req, res) => {
         _id: post._id, 
         supplier: post.supplierId?.supplierDetails?.legalName || 'System', 
         action: actionText, 
-        time: timeSince(new Date(post.updatedAt)), // Use updatedAt to show recent status changes
+        time: timeSince(new Date(post.updatedAt)),
         status: myClaim.status 
       };
     });
 
-    res.json({ 
-      stats: { activeClaims, mealsProvided, savedKgs }, 
-      feed: feed.length > 0 ? feed : [] 
-    });
+    res.json({ stats: { activeClaims, mealsProvided, savedKgs }, feed: feed.length > 0 ? feed : [] });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

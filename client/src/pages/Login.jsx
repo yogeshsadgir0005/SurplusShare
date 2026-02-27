@@ -45,11 +45,38 @@ const Login = () => {
     }
   };
 
+    const HeroIcon = () => (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 2L3 7V17L12 22L21 17V7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M12 22V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M21 7L12 12L3 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans selection:bg-indigo-100">
-      
+
+    < div className="flex item-center ">
+    
+    
+                      <aside className="hidden flex items-center justify-center lg:flex w-[400px] xl:w-[480px] bg-slate-900 flex-col p-12 relative overflow-hidden shrink-0 border-r border-slate-800">
+        <div className="relative z-10 flex flex-col h-full">
+          <div className="flex items-center gap-3 mb-16 cursor-pointer group" onClick={() => navigate('/')}>
+            <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center shadow-sm">
+        <HeroIcon />            </div>
+            <span className="text-xl font-bold tracking-tight text-white">SurplusShare</span>
+          </div>
+          
+          <div className="space-y-6 mb-16">
+            <h2 className="text-3xl font-bold text-white tracking-tight leading-tight">Start sharing your surplus food.</h2>
+            <p className="text-slate-400 text-sm leading-relaxed max-w-sm">Create a verified donor account to connect with local NGOs, schedule daily drops, and track your organization's impact.</p>
+          </div>
+        </div>
+      </aside>
+
+
+    <div className=" min-h-screen bg-slate-50 flex flex-col w-full justify-center py-12 sm:px-6 lg:px-8 font-sans selection:bg-indigo-100">
       {/* Clean Header & Logo */}
-      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
+      <div className="sm:mx-auto  sm:w-full sm:max-w-md text-center">
         <div className="w-12 h-12 bg-slate-900 text-white rounded-xl flex items-center justify-center mx-auto mb-4 shadow-sm">
           <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M12 2L3 7V17L12 22L21 17V7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -70,6 +97,8 @@ const Login = () => {
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow-sm border border-slate-200 sm:rounded-xl sm:px-10">
           
+
+
           {/* Professional Segmented Control for Role */}
           <div className="flex bg-slate-100 p-1 rounded-lg mb-8 border border-slate-200/60">
             {['NGO', 'Supplier'].map(tab => (
@@ -165,6 +194,10 @@ const Login = () => {
       </div>
       
     </div>
+
+    
+    </div>
+
   );
 };
 

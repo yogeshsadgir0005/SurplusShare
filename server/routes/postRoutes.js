@@ -24,7 +24,8 @@ router.route('/')
   .get(protect, getActivePosts);
 
 router.get('/supplier', protect, getSupplierPosts);
-router.put('/:id', protect, updatePost);
+// FIXED: Only ONE update route, and it includes the image middleware
+router.put('/:id', protect, upload.single('image'), updatePost);
 router.put('/:id/status', protect, updatePostStatus);
 router.post('/:id/claim', protect, claimPost);
 router.put('/:id/claim/manage', protect, manageClaim);
