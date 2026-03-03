@@ -46,10 +46,11 @@ const LocationPicker = ({ position, setPosition, lastAction }) => {
   ) : null;
 };
 
+// Organic Input Wrapper
 const InputWrapper = ({ label, children, icon }) => (
-  <div className="space-y-1.5">
-    <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-      {icon && <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={icon}/></svg>}
+  <div className="space-y-2">
+    <label className="text-[12px] font-extrabold text-[#82a38e] uppercase tracking-wider flex items-center gap-2 pl-1">
+      {icon && <svg className="w-4 h-4 text-[#10b981]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d={icon}/></svg>}
       {label}
     </label>
     {children}
@@ -179,208 +180,233 @@ const PostFood = () => {
       submission.append('lat', mapPosition.lat);
       submission.append('lng', mapPosition.lng);
 
-      // FIXED: Explicitly force multipart headers so the image isn't lost during POST
       await api.post('/posts', submission, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       
-      toast.success('Surplus Released to Network');
+      toast.success('Food drop posted successfully!');
       navigate('/supplier/dashboard');
     } catch (err) {
-      toast.error('Network Synchronization Failed');
+      toast.error('Failed to post food');
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const commonInputClass = "w-full bg-[#f4f7f4] border-2 border-transparent rounded-full px-5 py-3.5 text-[15px] font-bold text-[#064e3b] outline-none focus:bg-white focus:border-[#10b981]/30 focus:ring-4 focus:ring-[#10b981]/10 transition-all shadow-inner shadow-black/[0.01]";
+
   return (
     <Layout role="Supplier">
-      <div className="max-w-6xl mx-auto space-y-8">
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-5">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-medium text-slate-500 mb-1">
-              <span className="cursor-pointer hover:text-emerald-600 transition-colors" onClick={() => navigate('/supplier/dashboard')}>Dashboard</span>
-              <span>/</span>
-              <span className="text-emerald-600">New Release</span>
-            </div>
-            <h1 className="text-2xl font-bold text-slate-900">Post Food Drop</h1>
-          </div>
+      <div className="max-w-[1200px] mx-auto space-y-8 pb-10">
+        
+        <header className="flex flex-col gap-1.5">
+          <h1 className="text-[32px] font-extrabold text-[#064e3b] tracking-tight">Post Food Drop</h1>
+          <p className="text-[15px] font-medium text-[#4a6b56]">Broadcast real-time surplus food availability to nearby verified NGOs.</p>
         </header>
 
         <form onSubmit={executePost} className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-          <div className="lg:col-span-2 space-y-6">
+          
+          {/* Main Left Column */}
+          <div className="lg:col-span-2 space-y-6 lg:space-y-8">
             
-            <section className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-6">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4 border-b border-slate-100 pb-3">Food Details</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            {/* Food Details Section */}
+            <section className="bg-white rounded-[2rem] border border-[#e8f0eb] shadow-[0_8px_30px_rgb(0,0,0,0.03)] p-6 sm:p-10 transition-all duration-500 hover:shadow-[0_15px_40px_rgb(0,0,0,0.04)]">
+              <h3 className="text-xl font-extrabold text-[#064e3b] mb-6 border-b border-[#e8f0eb] pb-4">Food Details</h3>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
                 <InputWrapper label="Category" icon="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4">
-                  <select name="category" value={formData.category} onChange={handleInputChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors">
-                    <option>Prepared Meals</option><option>Bakery/Grains</option><option>Produce</option><option>Dairy</option><option>Meat/Protein</option>
+                  <select name="category" value={formData.category} onChange={handleInputChange} className={`${commonInputClass} cursor-pointer`}>
+                    <option>Prepared Meals</option>
+                    <option>Bakery/Grains</option>
+                    <option>Produce</option>
+                    <option>Dairy</option>
+                    <option>Meat/Protein</option>
                   </select>
                 </InputWrapper>
-                <InputWrapper label="Total Volume (kg)" icon="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3">
-                  <input type="number" step="0.1" name="weight" required value={formData.weight} onChange={handleInputChange} placeholder="0.0" className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
+                
+                <InputWrapper label="Total Weight (kg)" icon="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3">
+                  <input type="number" step="0.1" name="weight" required value={formData.weight} onChange={handleInputChange} placeholder="e.g. 15.5" className={commonInputClass}/>
                 </InputWrapper>
               </div>
 
-              <div className="bg-slate-50 border border-slate-200 rounded-lg p-5">
-                <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-3">Will you provide packaging ?</h4>
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <label className={`flex-1 p-3 rounded-lg border cursor-pointer transition-all flex items-center gap-3 ${formData.packaging === true ? 'bg-emerald-50 border-emerald-500 text-emerald-800' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
-                    <input type="radio" name="packaging" value="true" checked={formData.packaging === true} onChange={handleInputChange} className="hidden" />
-                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${formData.packaging === true ? 'border-emerald-500' : 'border-slate-300'}`}>
-                      {formData.packaging === true && <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-end">
+                <InputWrapper label="Packaging" icon="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z">
+                    <div className="flex bg-[#f4f7f4] rounded-full p-1.5 border border-[#e8f0eb]">
+                        <button 
+                            type="button" 
+                            onClick={() => setFormData({...formData, packaging: true})} 
+                            className={`flex-1 py-2.5 text-[14.5px] font-extrabold rounded-full transition-all duration-300 ${formData.packaging === true ? 'bg-white text-[#064e3b] shadow-[0_2px_8px_rgba(0,0,0,0.04)]' : 'text-[#82a38e] hover:text-[#4a6b56]'}`}
+                        >
+                            YES
+                        </button>
+                        <button 
+                            type="button" 
+                            onClick={() => setFormData({...formData, packaging: false})} 
+                            className={`flex-1 py-2.5 text-[14.5px] font-extrabold rounded-full transition-all duration-300 ${formData.packaging === false ? 'bg-white text-[#064e3b] shadow-[0_2px_8px_rgba(0,0,0,0.04)]' : 'text-[#82a38e] hover:text-[#4a6b56]'}`}
+                        >
+                            NO
+                        </button>
                     </div>
-                    <span className="text-sm font-semibold">YES</span>
-                  </label>
-                  <label className={`flex-1 p-3 rounded-lg border cursor-pointer transition-all flex items-center gap-3 ${formData.packaging === false ? 'bg-emerald-50 border-emerald-500 text-emerald-800' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
-                    <input type="radio" name="packaging" value="false" checked={formData.packaging === false} onChange={handleInputChange} className="hidden" />
-                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${formData.packaging === false ? 'border-emerald-500' : 'border-slate-300'}`}>
-                      {formData.packaging === false && <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>}
-                    </div>
-                    <span className="text-sm font-semibold">NO</span>
-                  </label>
-                </div>
+                </InputWrapper>
+                
+                <InputWrapper label="Shelf Life" icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z">
+                   <select name="shelfLife" required value={formData.shelfLife} onChange={handleInputChange} className={`${commonInputClass} cursor-pointer`}>
+                      <option value="">Select shelf life</option>
+                      <option>2 Hours</option>
+                      <option>4 Hours</option>
+                      <option>12 Hours</option>
+                      <option>24 Hours</option>
+                      <option>2-3 Days</option>
+                      <option>1 Week+</option>
+                   </select>
+                </InputWrapper>
               </div>
 
-              <InputWrapper label="Food Life" icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z">
-                 <input type="text" name="shelfLife" required value={formData.shelfLife} onChange={handleInputChange} placeholder="e.g. Needs pickup within 4 hours" className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
-              </InputWrapper>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 border-t border-slate-100 pt-5">
-                <InputWrapper label="Pickup Deadline" icon="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
-                  <input type="date" name="pickupDate" required min={todayFormatted} value={formData.pickupDate} onChange={handleInputChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 border-t border-[#e8f0eb] pt-6 mt-6">
+                <InputWrapper label="Pickup Date" icon="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                  <input type="date" name="pickupDate" required min={todayFormatted} value={formData.pickupDate} onChange={handleInputChange} className={commonInputClass}/>
                 </InputWrapper>
                 <InputWrapper label="Pickup Time" icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z">
-                  <input type="time" name="pickupTime" required value={formData.pickupTime} onChange={handleInputChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
+                  <input type="time" name="pickupTime" required value={formData.pickupTime} onChange={handleInputChange} className={commonInputClass}/>
                 </InputWrapper>
               </div>
             </section>
 
-            <section className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-6">
-               <h3 className="text-lg font-semibold text-slate-900 mb-4 border-b border-slate-100 pb-3">Pickup Location</h3>
+            {/* Logistics & Location Section */}
+            <section className="bg-white rounded-[2rem] border border-[#e8f0eb] shadow-[0_8px_30px_rgb(0,0,0,0.03)] p-6 sm:p-10 transition-all duration-500 hover:shadow-[0_15px_40px_rgb(0,0,0,0.04)]">
+               <h3 className="text-xl font-extrabold text-[#064e3b] mb-6 border-b border-[#e8f0eb] pb-4">Logistics & Location</h3>
            
-               <div className="grid grid-cols-1 md:grid-cols-3 gap-5 bg-slate-50 border border-slate-200 p-5 rounded-lg">
+               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
                   <InputWrapper label="State">
-                     <select name="state" required value={formData.state} onChange={handleInputChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors cursor-pointer">
+                     <select name="state" required value={formData.state} onChange={handleInputChange} className={`${commonInputClass} cursor-pointer`}>
                         <option value="">Select State</option>
                         {states.map(s => <option key={s.state} value={s.state}>{s.state}</option>)}
                      </select>
                   </InputWrapper>
                   <InputWrapper label="District">
-                     <select name="district" required value={formData.district} onChange={handleInputChange} disabled={!formData.state} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none disabled:opacity-50 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors cursor-pointer">
+                     <select name="district" required value={formData.district} onChange={handleInputChange} disabled={!formData.state} className={`${commonInputClass} cursor-pointer disabled:opacity-50`}>
                         <option value="">Select District</option>
                         {districts.map(d => <option key={d} value={d}>{d}</option>)}
                      </select>
                   </InputWrapper>
                   <InputWrapper label="City / Town">
-                     <input type="text" name="city" required value={formData.city} onChange={handleInputChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
+                     <input type="text" name="city" required value={formData.city} onChange={handleInputChange} className={commonInputClass} placeholder="Enter City"/>
+                  </InputWrapper>
+                  <InputWrapper label="Street Address">
+                     <input type="text" name="pickupAddress" required value={formData.pickupAddress} onChange={handleInputChange} className={commonInputClass} placeholder="Building, Street, Gate No."/>
                   </InputWrapper>
                </div>
-    <InputWrapper label="Street Address" icon="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z">
-                  <input type="text" name="pickupAddress" required value={formData.pickupAddress} onChange={handleInputChange} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"/>
-               </InputWrapper>
-               <div className="pt-2">
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                      <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+
+               <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="text-[12px] font-extrabold text-[#82a38e] uppercase tracking-wider flex items-center gap-2 pl-1">
+                      <svg className="w-4 h-4 text-[#10b981]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                       Pin Exact Location
                     </label>
                     {!mapPosition ? (
-                      <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-200 uppercase tracking-widest animate-pulse">Required</span>
+                      <span className="text-[10px] font-bold text-[#d97706] bg-[#fffbeb] px-2.5 py-1 rounded-full uppercase tracking-widest animate-pulse">Required</span>
                     ) : (
-                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-200 uppercase tracking-widest">Saved</span>
+                      <span className="text-[10px] font-bold text-[#10b981] bg-[#ecfdf5] px-2.5 py-1 rounded-full uppercase tracking-widest">Saved</span>
                     )}
                   </div>
-                  <div className="h-[300px] w-full rounded-lg overflow-hidden border border-slate-300 relative z-10 shadow-sm">
+                  <div className="h-[300px] w-full rounded-[2rem] overflow-hidden border-4 border-[#f4f7f4] shadow-sm relative z-10 group">
                     <MapContainer center={defaultPosition} zoom={mapPosition ? 14 : 5} scrollWheelZoom={true} style={{ height: "100%", width: "100%" }}>
                       <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap' />
                       <MapUpdater position={mapPosition} />
                       <LocationPicker position={mapPosition} setPosition={setMapPosition} lastAction={lastAction} />
                     </MapContainer>
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-[#064e3b]/90 backdrop-blur-md text-white px-5 py-2.5 rounded-full text-[12px] font-bold shadow-xl pointer-events-none z-[400] whitespace-nowrap opacity-90 group-hover:opacity-100 transition-opacity">
+                         Drag pin to specific loading dock
+                    </div>
                   </div>
-                  <p className="text-xs text-slate-500 mt-2 flex items-center gap-1.5">
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    Auto-pins to your address. Drag it to adjust the exact gate or loading dock.
-                  </p>
                </div>
             </section>
-
-            <section className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-5">
-               <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-slate-100 pb-3">
-                  <h3 className="text-lg font-semibold text-slate-900">Contact Details</h3>
-                  <label className="flex items-center gap-2.5 cursor-pointer group">
-                     <div className={`w-4 h-4 rounded flex items-center justify-center transition-colors border ${sameAsProfile ? 'bg-emerald-600 border-emerald-600' : 'bg-white border-slate-300 group-hover:border-emerald-500'}`}>
-                        {sameAsProfile && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"/></svg>}
+            
+            {/* Contact Section */}
+            <section className="bg-white rounded-[2rem] border border-[#e8f0eb] shadow-[0_8px_30px_rgb(0,0,0,0.03)] p-6 sm:p-10 transition-all duration-500 hover:shadow-[0_15px_40px_rgb(0,0,0,0.04)]">
+               <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-[#e8f0eb] pb-4 mb-6">
+                  <h3 className="text-xl font-extrabold text-[#064e3b]">Contact Details</h3>
+                  
+                  {/* Preserved EXACT functionality of "Use profile defaults" */}
+                  <label className="flex items-center gap-3 cursor-pointer group bg-[#f4f7f4] p-1.5 pr-4 rounded-full border border-[#e8f0eb]">
+                     <div className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors shadow-sm ${sameAsProfile ? 'bg-[#10b981]' : 'bg-white group-hover:bg-[#e8f0eb]'}`}>
+                        {sameAsProfile && <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>}
                      </div>
                      <input type="checkbox" checked={sameAsProfile} onChange={toggleSameAsProfile} className="hidden"/>
-                     <span className="text-sm font-medium text-slate-600 group-hover:text-slate-900">Use profile defaults</span>
+                     <span className="text-[13px] font-bold text-[#064e3b] uppercase tracking-wider">Use Profile Defaults</span>
                   </label>
                </div>
 
-               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
                   <InputWrapper label="Contact Name" icon="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z">
-                     <input type="text" name="contactName" required value={formData.contactName} onChange={handleInputChange} disabled={sameAsProfile} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed disabled:border-slate-200"/>
+                     <input type="text" name="contactName" required value={formData.contactName} onChange={handleInputChange} disabled={sameAsProfile} className={`${commonInputClass} ${sameAsProfile ? 'opacity-60 cursor-not-allowed bg-slate-50' : ''}`} placeholder="Name"/>
                   </InputWrapper>
                   <InputWrapper label="Phone Number" icon="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z">
-                     <input type="tel" name="contactPhone" required value={formData.contactPhone} onChange={handleInputChange} disabled={sameAsProfile} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed disabled:border-slate-200"/>
+                     <input type="tel" name="contactPhone" required value={formData.contactPhone} onChange={handleInputChange} disabled={sameAsProfile} className={`${commonInputClass} ${sameAsProfile ? 'opacity-60 cursor-not-allowed bg-slate-50' : ''}`} placeholder="Phone"/>
                   </InputWrapper>
                </div>
                
                <InputWrapper label="Gate / Entry Instructions (Optional)" icon="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
-                  <textarea name="specialInstructions" rows="3" value={formData.specialInstructions} onChange={handleInputChange} placeholder="e.g. Enter via South Gate terminal 4. Ask for John." className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors resize-none placeholder:text-slate-400"/>
+                  <textarea name="specialInstructions" rows="3" value={formData.specialInstructions} onChange={handleInputChange} className="w-full bg-[#f4f7f4] border-2 border-transparent rounded-[1.5rem] px-5 py-4 text-[15px] font-bold text-[#064e3b] outline-none focus:bg-white focus:border-[#10b981]/30 focus:ring-4 focus:ring-[#10b981]/10 transition-all resize-none placeholder:text-[#82a38e] shadow-inner shadow-black/[0.01]" placeholder="e.g. Enter via South Gate terminal 4. Ask for John."/>
                </InputWrapper>
             </section>
           </div>
 
+          {/* Right Column / Sticky Upload & Submit */}
           <div className="lg:col-span-1 space-y-6">
-             <section className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
-                <div className="p-5 border-b border-slate-100">
-                  <h3 className="text-base font-semibold text-slate-900">Food Verification</h3>
-                  <p className="text-xs text-slate-500 mt-1">Clear visual proof is required to ensure trust across the network.</p>
+             
+             {/* Verification Upload */}
+             <section className="bg-white border border-[#e8f0eb] rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.03)] overflow-hidden flex flex-col transition-all duration-500 hover:shadow-[0_15px_40px_rgb(0,0,0,0.04)] sticky top-24">
+                <div className="p-6 border-b border-[#e8f0eb] bg-[#fbfdfb]">
+                  <h3 className="text-lg font-extrabold text-[#064e3b]">Verification Image</h3>
+                  <p className="text-[13px] font-medium text-[#4a6b56] mt-1">Clear visual proof is required to ensure trust across the network.</p>
                 </div>
                 
-                <div className="p-5 bg-slate-50 flex-grow">
+                <div className="p-6 flex-grow">
                   <div 
                     onClick={() => fileInputRef.current.click()}
-                    className={`relative w-full h-48 rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-colors overflow-hidden ${imagePreview ? 'border-emerald-500 bg-white' : 'border-slate-300 bg-white hover:border-emerald-400 hover:bg-emerald-50/30 group'}`}
+                    className={`relative w-full h-56 rounded-[1.5rem] border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all duration-300 overflow-hidden ${imagePreview ? 'border-[#10b981] bg-white' : 'border-[#82a38e]/40 bg-[#f4f7f4] hover:border-[#10b981] hover:bg-[#ecfdf5] group'}`}
                   >
                     {imagePreview ? (
                       <>
                         <img src={imagePreview} className="w-full h-full object-cover" alt="Preview"/>
-                        <div className="absolute inset-0 bg-slate-900/50 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold">Change Photo</div>
+                        <div className="absolute inset-0 bg-[#064e3b]/60 backdrop-blur-sm opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[13px] font-extrabold uppercase tracking-wider">
+                          Change Photo
+                        </div>
                       </>
                     ) : (
                       <div className="text-center px-4">
-                         <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center mx-auto mb-3 text-slate-400 group-hover:text-emerald-500 group-hover:bg-emerald-100/50 transition-colors">
-                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                         <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center mx-auto mb-3 text-[#82a38e] group-hover:text-[#10b981] shadow-sm transition-colors">
+                           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
                          </div>
-                         <p className="text-sm font-semibold text-slate-700 mb-1">Click to Upload</p>
-                         <p className="text-xs text-slate-500">Max size: 5MB</p>
+                         <p className="text-[15px] font-extrabold text-[#064e3b] mb-1">Click to Upload</p>
+                         <p className="text-[12px] font-semibold text-[#82a38e] uppercase tracking-wider">JPG, PNG (Max 5MB)</p>
                       </div>
                     )}
                   </div>
                   <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageChange}/>
                 </div>
-             </section>
 
-             <section className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-                <div className="space-y-3 mb-6">
-                   <div className="flex gap-3 items-start">
-                     <svg className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                     <p className="text-xs text-slate-600 leading-relaxed">By posting, you verify this food complies with local safety and handling regulations.</p>
+                <div className="p-6 bg-[#fbfdfb] border-t border-[#e8f0eb] space-y-4">
+                   <div className="flex gap-3 items-start bg-[#ecfdf5] p-4 rounded-[1.5rem] border border-[#d1fae5]">
+                     <svg className="w-5 h-5 text-[#10b981] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                     <p className="text-[13px] font-semibold text-[#064e3b] leading-relaxed">Verified NGO partners in your logistics radius will be notified immediately.</p>
                    </div>
-                   <div className="flex gap-3 items-start">
-                     <svg className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
-                     <p className="text-xs text-slate-600 leading-relaxed">Verified NGO partners in your logistics radius will be notified immediately.</p>
-                   </div>
+                   
+                   <button type="submit" disabled={isSubmitting} className={`w-full py-4 rounded-full text-[15px] font-extrabold shadow-[0_4px_14px_rgba(16,185,129,0.3)] transition-all duration-300 flex items-center justify-center gap-2.5 ${isSubmitting ? 'bg-[#10b981]/70 text-white cursor-not-allowed' : 'bg-[#10b981] text-white hover:bg-[#059669] hover:-translate-y-0.5'}`}>
+                    {isSubmitting ? (
+                       <div className="w-5 h-5 border-[3px] border-white/30 border-t-white rounded-full animate-spin"></div>
+                    ) : (
+                      <>
+                        Publish Live Drop
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
+                      </>
+                    )}
+                  </button>
                 </div>
-
-                <button type="submit" disabled={isSubmitting} className={`w-full py-3 rounded-lg font-semibold text-sm shadow-sm transition-all flex items-center justify-center gap-2 ${isSubmitting ? 'bg-emerald-500 opacity-70 cursor-not-allowed text-white' : 'bg-emerald-600 hover:bg-emerald-700 text-white active:scale-[0.98]'}`}>
-                  {isSubmitting ? <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div> : <><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>Post Food drop</>}
-                </button>
              </section>
           </div>
+
         </form>
       </div>
     </Layout>

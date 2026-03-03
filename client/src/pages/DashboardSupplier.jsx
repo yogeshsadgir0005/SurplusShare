@@ -27,182 +27,121 @@ const DashboardSupplier = () => {
     fetchData();
   }, []);
 
-  // Upgraded SaaS-style Stat Card
+  // Organic SaaS-style Stat Card
   const StatMiniCard = ({ label, value, unit, icon, iconBg, iconColor }) => (
-    <div className="bg-white border border-slate-200 p-5 rounded-xl shadow-sm flex items-start gap-4 hover:shadow-md transition-shadow">
-      <div className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 ${iconBg} ${iconColor}`}>
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={icon} />
-        </svg>
+    <div className="bg-white rounded-[2rem] border border-[#e8f0eb] shadow-[0_8px_30px_rgb(0,0,0,0.03)] hover:shadow-[0_20px_40px_rgb(0,0,0,0.06)] hover:-translate-y-1 transition-all duration-500 p-6 sm:p-8 flex items-start gap-5 group">
+      <div className={`w-14 h-14 rounded-full flex items-center justify-center shrink-0 transition-transform duration-500 group-hover:scale-110 ${iconBg} ${iconColor}`}>
+        {icon}
       </div>
       <div>
-        <p className="text-sm font-medium text-slate-500 mb-1">{label}</p>
-        <div className="flex items-baseline gap-1.5">
-          <span className="text-2xl font-bold text-slate-900 leading-none">{value}</span>
-          <span className="text-sm font-medium text-slate-500">{unit}</span>
-        </div>
+        <p className="text-[13px] font-extrabold text-[#82a38e] uppercase tracking-wider mb-1.5 transition-colors group-hover:text-[#059669]">{label}</p>
+        <p className="text-3xl sm:text-4xl font-black text-[#064e3b]">{value} <span className="text-[16px] font-bold text-[#4a6b56] ml-1">{unit}</span></p>
       </div>
     </div>
   );
 
   return (
     <Layout role="Supplier">
-      <div className="max-w-6xl mx-auto space-y-8">
+      <div className="max-w-[1400px] mx-auto space-y-6 lg:space-y-8 pb-10">
         
-        {/* Sleek SaaS Header */}
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-5">
+        {/* Header */}
+        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Supplier Dashboard</h1>
-            <p className="text-sm text-slate-500 mt-1">Manage your surplus food releases and track your network impact.</p>
+            <h1 className="text-[32px] font-extrabold text-[#064e3b] tracking-tight">Supplier Dashboard</h1>
+            <p className="text-[15px] font-medium text-[#4a6b56] mt-1">Manage your surplus food drops and track your community impact.</p>
           </div>
-          
-          {!loading && (
-            <div className="bg-emerald-50 border border-emerald-100 px-4 py-2 rounded-lg flex items-center gap-2.5 w-fit">
-              <div className="relative flex h-2 w-2 shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-              </div>
-              <p className="text-sm font-medium text-emerald-800">
-                {metrics.mealsDonated === 0 ? "Ready for your food release." : `${metrics.mealsDonated} meals shared so far.`}
-              </p>
-            </div>
-          )}
+          <div className="flex gap-3">
+             <button onClick={() => navigate('/supplier/schedule')} className="px-6 py-2.5 bg-white text-[#064e3b] border border-[#e8f0eb] shadow-sm hover:bg-[#f4f7f4] rounded-full text-[14.5px] font-bold transition-all duration-300">
+               Schedule Drops
+             </button>
+             <button onClick={() => navigate('/supplier/post')} className="px-6 py-2.5 transition-all duration-300 font-bold bg-[#10b981] text-white shadow-[0_4px_14px_rgba(16,185,129,0.3)] hover:bg-[#059669] hover:-translate-y-0.5 rounded-full flex items-center gap-2">
+               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/></svg>
+               Post Food
+             </button>
+          </div>
         </header>
 
-        {/* Analytics Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {loading ? (
-            [1,2,3].map(i => <div key={i} className="h-24 bg-white border border-slate-200 rounded-xl animate-pulse"></div>)
-          ) : (
-            <>
-              <StatMiniCard 
-                label="Total Impact" 
-                value={metrics.mealsDonated} 
-                unit="Meals" 
-                iconBg="bg-indigo-50"
-                iconColor="text-indigo-600"
-                icon="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
-              />
-              <StatMiniCard 
-                label="Food Saved" 
-                value={metrics.totalWeight} 
-                unit="kg" 
-                iconBg="bg-emerald-50"
-                iconColor="text-emerald-600"
-                icon="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"
-              />
-              <StatMiniCard 
-                label="Active Listings" 
-                value={activePosts.length} 
-                unit="Posts" 
-                iconBg="bg-amber-50"
-                iconColor="text-amber-600"
-                icon="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-              />
-            </>
-          )}
+        {/* Stats Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 lg:gap-8">
+          <StatMiniCard 
+            label="Total Donated" 
+            value={loading ? '...' : metrics.totalWeight} unit="kg"
+            iconBg="bg-[#ecfdf5]" iconColor="text-[#10b981]"
+            icon={<svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>}
+          />
+          <StatMiniCard 
+            label="Meals Provided" 
+            value={loading ? '...' : metrics.mealsDonated} unit="meals"
+            iconBg="bg-[#fff1f2]" iconColor="text-[#e11d48]"
+            icon={<svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>}
+          />
+          <StatMiniCard 
+            label="Active Drops" 
+            value={loading ? '...' : activePosts.length} unit="live"
+            iconBg="bg-[#fffbeb]" iconColor="text-[#d97706]"
+            icon={<svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>}
+          />
         </div>
 
-        {/* Clean Quick Actions Layout */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          <button onClick={() => navigate('/supplier/post')} className="flex items-center gap-4 p-4 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors shadow-sm text-left group">
-            <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center group-hover:bg-white/20 transition-colors shrink-0">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/></svg>
-            </div>
-            <div>
-              <span className="block text-sm font-semibold">Share Food</span>
-              <span className="block text-xs text-indigo-200">One-time release</span>
-            </div>
-          </button>
-
-          <button onClick={() => navigate('/supplier/schedule')} className="flex items-center gap-4 p-4 bg-white border border-slate-200 rounded-xl hover:border-emerald-500 hover:shadow-sm transition-all text-left group">
-            <div className="w-10 h-10 bg-slate-50 text-slate-400 rounded-lg flex items-center justify-center group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors shrink-0">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-            </div>
-            <div>
-              <span className="block text-sm font-semibold text-slate-900">Schedule Drops</span>
-              <span className="block text-xs text-slate-500">Daily recurring</span>
-            </div>
-          </button>
-
-          <button onClick={() => navigate('/supplier/history')} className="flex items-center gap-4 p-4 bg-white border border-slate-200 rounded-xl hover:border-indigo-500 hover:shadow-sm transition-all text-left group">
-            <div className="w-10 h-10 bg-slate-50 text-slate-400 rounded-lg flex items-center justify-center group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors shrink-0">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-            </div>
-            <div>
-              <span className="block text-sm font-semibold text-slate-900">History Log</span>
-              <span className="block text-xs text-slate-500">View past activity</span>
-            </div>
-          </button>
-        </div>
-
-        {/* Clean Data Table for Active Posts */}
-        <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="px-6 py-5 border-b border-slate-200 flex justify-between items-center bg-slate-50/50">
-            <div className="flex items-center gap-3">
-              <h3 className="text-base font-semibold text-slate-900">Active Food Posts</h3>
-              <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md text-xs font-medium">
+        {/* Content Section */}
+        <div className="bg-white rounded-[2rem] border border-[#e8f0eb] shadow-[0_8px_30px_rgb(0,0,0,0.03)] p-6 lg:p-8 flex flex-col">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-xl font-extrabold text-[#064e3b]">Active Drops</h3>
+            <span className="px-3 py-1.5 text-xs font-black uppercase tracking-wider flex items-center gap-1.5 rounded-full bg-[#ecfdf5] text-[#10b981]">
+                <div className="w-2 h-2 rounded-full animate-ping bg-[#059669]"></div> 
                 {activePosts.length} Live
-              </span>
-            </div>
-            <button onClick={() => navigate('/supplier/post')} className="text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors hidden sm:block">
-              + New Post
-            </button>
+            </span>
           </div>
 
-          <div className="divide-y divide-slate-100">
-            {loading ? (
-              [1,2,3].map(i => (
-                <div key={i} className="px-6 py-4 flex gap-4 animate-pulse">
-                  <div className="w-10 h-10 bg-slate-100 rounded-lg"></div>
-                  <div className="flex-1 space-y-2 py-1">
-                    <div className="h-4 bg-slate-100 rounded w-1/4"></div>
-                    <div className="h-3 bg-slate-50 rounded w-1/2"></div>
-                  </div>
-                </div>
-              ))
-            ) : activePosts.length === 0 ? (
-              <div className="px-6 py-12 flex flex-col items-center justify-center text-center">
-                <svg className="w-12 h-12 text-slate-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
-                <p className="text-sm font-medium text-slate-900 mb-1">No active food posts</p>
-                <p className="text-sm text-slate-500 mb-4">You currently have no surplus food listed on the network.</p>
-                <button onClick={() => navigate('/supplier/post')} className="px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors shadow-sm">
-                  Initialize Release
-                </button>
+          {loading ? (
+            <div className="py-16 text-center text-[#82a38e] font-extrabold animate-pulse">Loading active shipments...</div>
+          ) : activePosts.length === 0 ? (
+            <div className="py-16 flex flex-col items-center justify-center text-center bg-[#f4f7f4] rounded-[1.5rem] border border-[#e8f0eb] shadow-inner shadow-black/[0.01]">
+              <div className="w-16 h-16 bg-[#e8f0eb] text-[#82a38e] rounded-full flex items-center justify-center mb-4">
+                 <svg className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
               </div>
-            ) : (
-              activePosts.map((post, idx) => (
+              <h3 className="text-[16px] font-extrabold text-[#064e3b] mb-1">No Active Drops</h3>
+              <p className="text-[14.5px] font-medium text-[#4a6b56] mb-5 max-w-sm">You haven't posted any food drops recently. Ready to make an impact?</p>
+              <button onClick={() => navigate('/supplier/post')} className="px-6 py-2.5 bg-[#064e3b] text-white rounded-full font-bold hover:bg-[#043326] transition-colors shadow-sm">
+                Create First Drop
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {activePosts.map(post => (
                 <div 
-                  key={idx} 
-                  className="flex items-center justify-between px-6 py-4 transition-colors cursor-pointer hover:bg-slate-50 group" 
+                  key={post._id}
                   onClick={() => navigate(`/supplier/manage/${post._id}`)}
+                  className="bg-[#f4f7f4] p-5 rounded-[1.5rem] border border-[#e8f0eb] shadow-[0_4px_15px_rgb(0,0,0,0.02)] hover:shadow-[0_10px_30px_rgb(0,0,0,0.04)] hover:bg-white hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-between group cursor-pointer"
                 >
-                  <div className="flex items-center gap-4 min-w-0">
-                    <div className="w-10 h-10 shrink-0 rounded-lg border border-slate-200 bg-white flex items-center justify-center font-bold text-slate-600 text-sm group-hover:text-indigo-600 transition-colors">
+                  <div className="flex items-center gap-5">
+                    <div className="w-12 h-12 rounded-full bg-[#e8f0eb] text-[#10b981] flex items-center justify-center shrink-0 font-black text-lg shadow-inner">
                       {post.category.charAt(0)}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-slate-900 truncate group-hover:text-indigo-600 transition-colors">{post.category}</p>
-                      <p className="text-sm text-slate-500 truncate mt-0.5">
-                        {post.weight} kg <span className="mx-1.5 opacity-50">•</span> {post.type} Post
+                      <p className="text-[16px] font-extrabold text-[#064e3b] truncate group-hover:text-[#10b981] transition-colors">{post.category}</p>
+                      <p className="text-[13.5px] font-bold text-[#4a6b56] truncate mt-0.5 opacity-90">
+                        {post.weight} kg <span className="mx-2 opacity-50 text-[#82a38e]">•</span> {post.type} Post
                       </p>
                     </div>
                   </div>
                   
                   <div className="flex items-center gap-6 shrink-0 ml-4">
                     <div className="text-right hidden sm:block">
-                      <p className="text-sm font-medium text-slate-900">
+                      <p className="text-[14.5px] font-extrabold text-[#064e3b]">
                         {post.claims?.length || 0} {post.claims?.length === 1 ? 'Claim' : 'Claims'}
                       </p>
-                      <p className="text-xs text-slate-500 mt-0.5">{new Date(post.createdAt).toLocaleDateString()}</p>
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-[#82a38e] mt-1">{new Date(post.createdAt).toLocaleDateString()}</p>
                     </div>
-                    <svg className="w-5 h-5 text-slate-400 group-hover:text-indigo-600 transition-colors transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/></svg>
+                    <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-[#82a38e] group-hover:bg-[#ecfdf5] group-hover:text-[#10b981] transition-all duration-300 group-hover:translate-x-1">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
+                    </div>
                   </div>
                 </div>
-              ))
-            )}
-          </div>
-        </section>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </Layout>
   );

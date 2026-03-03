@@ -5,7 +5,8 @@ const path = require('path');
 const { 
   createPost, getActivePosts, getSupplierPosts, getPostById,
   updatePostStatus, updatePost, claimPost, manageClaim, 
-  getSupplierDashboardMetrics, getNgoDashboardMetrics, getLeaderboard
+  getSupplierDashboardMetrics, getNgoDashboardMetrics, getLeaderboard,
+  getNgoClaims, markClaimCompleted, getNgoHistory, getNgoImpact // <-- Imported
 } = require('../controllers/postController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -15,22 +16,28 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// Public Unprotected Routes
 router.get('/leaderboard', getLeaderboard);
 
-// Protected Routes
 router.route('/')
   .post(protect, upload.single('image'), createPost)
   .get(protect, getActivePosts);
 
 router.get('/supplier', protect, getSupplierPosts);
-// FIXED: Only ONE update route, and it includes the image middleware
 router.put('/:id', protect, upload.single('image'), updatePost);
 router.put('/:id/status', protect, updatePostStatus);
 router.post('/:id/claim', protect, claimPost);
 router.put('/:id/claim/manage', protect, manageClaim);
+
+// Dashboard routes
 router.get('/metrics', protect, getSupplierDashboardMetrics);
 router.get('/ngo/metrics', protect, getNgoDashboardMetrics);
+
+// NEW NGO Sub-Pages Routes
+router.get('/ngo/my-claims', protect, getNgoClaims);
+router.put('/ngo/claims/:id/complete', protect, markClaimCompleted);
+router.get('/ngo/history', protect, getNgoHistory);
+router.get('/ngo/impact', protect, getNgoImpact);
+
 router.get('/:id', protect, getPostById);
 
 module.exports = router;

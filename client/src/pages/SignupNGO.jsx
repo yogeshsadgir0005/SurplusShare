@@ -8,15 +8,14 @@ import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-lea
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
-  const HeroIcon = () => (
+const HeroIcon = () => (
     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M12 2L3 7V17L12 22L21 17V7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M12 22V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M21 7L12 12L3 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M12 2L3 7V17L12 22L21 17V7L12 2Z" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M12 22V12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M21 7L12 12L3 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
-  );
+);
 
-// Fix Leaflet marker icons
 const customIcon = new L.Icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -25,7 +24,6 @@ const customIcon = new L.Icon({
   iconAnchor: [12, 41]
 });
 
-// NEW: Auto Map Updater
 const MapUpdater = ({ position }) => {
   const map = useMap();
   useEffect(() => {
@@ -34,7 +32,6 @@ const MapUpdater = ({ position }) => {
   return null;
 };
 
-// UPDATED: Tracks manual interactions
 const LocationPicker = ({ position, setPosition, lastAction }) => {
   useMapEvents({
     click(e) { 
@@ -45,56 +42,32 @@ const LocationPicker = ({ position, setPosition, lastAction }) => {
   return position ? <Marker position={position} icon={customIcon} draggable={true} eventHandlers={{ dragstart: () => { if(lastAction) lastAction.current = 'map'; }, dragend: (e) => setPosition(e.target.getLatLng()) }} /> : null;
 };
 
-// Clean B2B Step Indicator
-const ProgressMarker = ({ step, label, active, completed }) => (
-  <div className="flex items-center gap-4 group">
-    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 ${
-      active ? 'bg-indigo-600 text-white ring-4 ring-indigo-500/20' 
-      : completed ? 'bg-indigo-100 text-indigo-600' 
-      : 'bg-slate-800 text-slate-400'
-    }`}>
-      {completed ? <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"/></svg> : step}
-    </div>
-    <span className={`text-sm font-semibold transition-colors ${active || completed ? 'text-white' : 'text-slate-500'}`}>{label}</span>
-  </div>
-);
-
-// Clean B2B Input Wrapper
-const InputField = ({ label, name, type = "text", required = true, placeholder, value, onChange }) => (
-  <div className="space-y-1.5">
-    <label className="block text-sm font-semibold text-slate-700">{label}</label>
-    <input 
-      type={type} name={name} required={required} value={value} onChange={onChange} placeholder={placeholder} 
-      className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors placeholder:text-slate-400"
-    />
-  </div>
-);
+// Sage Theme Constant Classes (To keep JSX clean)
+const inputClasses = "w-full bg-[#f4f7f4] border-2 border-transparent rounded-full px-5 py-3.5 text-[15px] font-bold text-[#064e3b] outline-none focus:bg-white focus:border-[#10b981]/30 focus:ring-4 focus:ring-[#10b981]/10 transition-all placeholder:text-[#82a38e] shadow-inner shadow-black/[0.01]";
+const labelClasses = "block text-[12px] font-extrabold text-[#82a38e] uppercase tracking-wider pl-1 mb-1.5";
 
 const SignupNGO = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
-  const [googleCredential, setGoogleCredential] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  
   const [mapPosition, setMapPosition] = useState(null);
   const lastAction = useRef('init');
 
+  const [showOTPModal, setShowOTPModal] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+
   const [formState, setFormState] = useState({
-    email: '', password: '', confirmPassword: '',
-    name: '', mission: '', website: '', mobile: '', address: '', city: '', district: '', state: ''
+    email: '', password: '', confirmPassword: '', name: '', mission: '', website: '', mobile: '', address: '', city: '', district: '', state: ''
   });
 
   const { states, districts } = useLocationAPI(formState.state);
 
-  // NEW: Debounced Auto-Geocoder for Registration
   useEffect(() => {
     if (lastAction.current === 'map' || lastAction.current === 'init') return;
-
     const addressParts = [formState.address, formState.city, formState.district, formState.state].filter(Boolean);
     if (addressParts.length < 2) return; 
 
     const query = addressParts.join(', ') + ', India';
-
     const timeoutId = setTimeout(async () => {
       try {
         const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`);
@@ -110,240 +83,269 @@ const SignupNGO = () => {
 
   const syncInput = (e) => {
     const { name, value } = e.target;
-    if (['address', 'city', 'district', 'state'].includes(name)) {
-      lastAction.current = 'text';
-    }
-
+    if (['address', 'city', 'district', 'state'].includes(name)) lastAction.current = 'text';
+    
     if (name === 'state') setFormState(prev => ({ ...prev, state: value, district: '', city: '' }));
     else if (name === 'district') setFormState(prev => ({ ...prev, district: value, city: '' }));
     else setFormState(prev => ({ ...prev, [name]: value }));
   };
 
-const advanceStage = async (e) => {
+  const handleNext = async (e) => {
     e.preventDefault();
-    if (formState.password !== formState.confirmPassword) return toast.error('Passwords do not match');
-    if (formState.password.length < 8) return toast.error('Minimum 8 characters required');
-    
-    // FIXED: Block progression if email already exists
+    if (formState.password !== formState.confirmPassword) {
+      return toast.error("Passwords don't match!");
+    }
+    setIsProcessing(true);
     try {
       await api.post('/auth/check-email', { email: formState.email });
       setCurrentStep(2);
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Email verification failed');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Email already exists');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
-const initializeGoogleBridge = async (response) => {
-    // FIXED: Test if Google account exists before proceeding
-    try {
-      const res = await api.post('/auth/google', { token: response.credential });
-      // If no error, the user exists! Log them straight in.
-      localStorage.setItem('token', res.data.token);
-      localStorage.setItem('user', JSON.stringify(res.data));
-      toast.success('Welcome back! Logged in successfully.');
-
-      // Route based on what role they had
-      if (res.data.role === 'NGO') navigate('/ngo/dashboard');
-      else navigate('/supplier/dashboard');
-
-    } catch (error) {
-      // 404 means they don't exist yet, proceed to Profile Setup (Step 2)
-      if (error.response?.status === 404) {
-        setGoogleCredential(response.credential);
-        toast.success('Google verified. Please complete your profile.');
-        setCurrentStep(2);
-      } else {
-        toast.error('Google Authentication Failed');
-      }
-    }
-  };
-
-  const finalizeOnboarding = async (e) => {
+  const requestOTPAndSubmit = async (e) => {
     e.preventDefault();
     setIsProcessing(true);
     try {
-      let sessionData;
-      const attributes = {
-        name: formState.name, mission: formState.mission, website: formState.website,
-        mobile: formState.mobile, address: formState.address, city: formState.city, 
-        district: formState.district, state: formState.state,
-        lat: mapPosition?.lat, lng: mapPosition?.lng 
+       await api.post('/auth/send-otp', { email: formState.email });
+       setShowOTPModal(true);
+       toast.success(`Verification code sent to ${formState.email}`);
+    } catch (err) {
+       toast.error(err.response?.data?.message || 'Failed to send OTP');
+    } finally {
+       setIsProcessing(false);
+    }
+  };
+
+  const verifyAndRegister = async () => {
+    if(otpCode.length !== 6) return toast.error("Please enter the 6-digit code");
+    setIsProcessing(true);
+    try {
+      const payload = {
+        email: formState.email, password: formState.password, role: 'NGO', otp: otpCode,
+        details: {
+          name: formState.name, mission: formState.mission, website: formState.website,
+          mobile: formState.mobile, address: formState.address, city: formState.city, 
+          district: formState.district, state: formState.state,
+          lat: mapPosition?.lat, lng: mapPosition?.lng 
+        }
       };
-      if (googleCredential) {
-        const res = await api.post('/auth/google', { token: googleCredential, role: 'NGO', details: attributes });
-        sessionData = res.data;
-      } else {
-        const res = await api.post('/auth/register', { email: formState.email, password: formState.password, role: 'NGO', details: attributes });
-        sessionData = res.data;
-      }
-      localStorage.setItem('token', sessionData.token);
-      localStorage.setItem('user', JSON.stringify(sessionData));
-      toast.success('Workspace Created Successfully');
+      const res = await api.post('/auth/register', payload);
+      localStorage.setItem('user', JSON.stringify(res.data));
+      toast.success('NGO Account Created Successfully!');
       navigate('/ngo/dashboard');
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Registration Failed');
+      toast.error(err.response?.data?.message || 'Registration failed');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setIsProcessing(true);
+    try {
+      const res = await api.post('/auth/google', { token: credentialResponse.credential, role: 'NGO' });
+      localStorage.setItem('user', JSON.stringify(res.data));
+      toast.success('Successfully signed in with Google!');
+      navigate('/ngo/dashboard');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Google Auth failed');
     } finally {
       setIsProcessing(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex font-sans selection:bg-indigo-100">
-      
-      {/* SaaS Sidebar */}
-      <aside className="hidden lg:flex w-[400px] xl:w-[480px] bg-slate-900 flex-col p-12 relative overflow-hidden shrink-0 border-r border-slate-800">
-        <div className="relative z-10 flex flex-col h-full">
-          {/* Logo */}
-          <div className="flex items-center gap-3 mb-16 cursor-pointer group" onClick={() => navigate('/')}>
-            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
- <HeroIcon />        </div>
-            <span className="text-xl font-bold tracking-tight text-white">SurplusShare</span>
-          </div>
-          
-          <div className="space-y-6 mb-16">
-            <h2 className="text-3xl font-bold text-white tracking-tight leading-tight">Partner with us to end hunger.</h2>
-            <p className="text-slate-400 text-sm leading-relaxed max-w-sm">Join the centralized network to efficiently locate, claim, and coordinate surplus food pickups in your operational area.</p>
-          </div>
-
-          <div className="space-y-8 mt-auto">
-            <ProgressMarker step="1" label="Account Configuration" active={currentStep === 1} completed={currentStep > 1} />
-            <div className="w-0.5 h-8 bg-slate-800 ml-4 -my-4"></div>
-            <ProgressMarker step="2" label="Organization Profile" active={currentStep === 2} completed={false} />
-          </div>
-        </div>
-      </aside>
-
-      <main className="flex-grow flex flex-col items-center justify-center p-4 sm:p-8 lg:p-12 overflow-y-auto">
+    <div className="min-h-screen bg-[#f4f7f4] flex items-center justify-center p-4 font-sans selection:bg-[#ecfdf5] selection:text-[#059669]">
+      <div className="max-w-5xl w-full bg-white rounded-[2.5rem] shadow-[0_15px_40px_rgb(0,0,0,0.04)] border border-[#e8f0eb] overflow-hidden flex flex-col md:flex-row min-h-[650px]">
         
-        {/* Mobile Header */}
-        <div className="lg:hidden flex flex-col items-center mb-8 text-center w-full">
-          <div className="w-10 h-10 bg-slate-900 text-white rounded-xl flex items-center justify-center mb-3 shadow-sm" onClick={() => navigate('/')}>
-             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 21l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-          </div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">NGO Partner Application</h2>
+        {/* Left Sidebar Branding */}
+        <div className="bg-[#064e3b] md:w-[45%] p-8 sm:p-12 text-white flex flex-col justify-between relative overflow-hidden">
+           <div className="absolute -top-24 -left-24 w-72 h-72 bg-[#10b981] rounded-full blur-[80px] opacity-20"></div>
+           <div className="absolute -bottom-24 -right-24 w-72 h-72 bg-[#059669] rounded-full blur-[80px] opacity-30"></div>
+           
+           <div className="relative z-10">
+              <div className="flex items-center gap-3 mb-14">
+                 <div className="w-12 h-12 bg-[#ecfdf5] text-[#10b981] rounded-full flex items-center justify-center shadow-sm">
+                    <HeroIcon />
+                 </div>
+                 <span className="text-xl font-extrabold tracking-tight">SurplusShare</span>
+              </div>
+              <h2 className="text-4xl sm:text-5xl font-black leading-tight mb-5">Empower<br/>your impact.</h2>
+              <p className="text-[#82a38e] text-[15px] font-medium leading-relaxed max-w-sm">Join a network of food donors. Rescue surplus food efficiently, coordinate pickups, and feed your community.</p>
+           </div>
+           
+           <div className="relative z-10 mt-12 md:mt-0">
+             <div className="flex items-center gap-3">
+               <div className={`w-10 h-1.5 rounded-full transition-all duration-500 ${currentStep === 1 ? 'bg-[#10b981]' : 'bg-white/20'}`}></div>
+               <div className={`w-10 h-1.5 rounded-full transition-all duration-500 ${currentStep === 2 ? 'bg-[#10b981]' : 'bg-white/20'}`}></div>
+             </div>
+             <p className="text-[11px] font-extrabold text-[#82a38e] mt-4 uppercase tracking-widest">Phase {currentStep} of 2</p>
+           </div>
         </div>
 
-        <div className="w-full max-w-[600px] bg-white rounded-xl sm:rounded-2xl p-6 sm:p-10 shadow-sm border border-slate-200">
-          <header className="mb-8">
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight mb-2">
-              {currentStep === 1 ? 'Create your account' : 'Organization Details'}
-            </h1>
-            <p className="text-sm text-slate-500">
-              {currentStep === 1 ? 'Start by setting up your login credentials.' : 'Complete your profile to gain network access.'}
+        {/* Right Content Form */}
+        <div className="w-full md:w-[55%] p-8 sm:p-12 relative flex flex-col justify-center">
+          
+          <div className="absolute top-8 right-10">
+            <p className="text-[13px] text-[#82a38e] font-extrabold uppercase tracking-wider">
+              Have an account? <Link to="/login" className="text-[#10b981] hover:text-[#059669] transition-colors ml-1">Sign in</Link>
             </p>
-          </header>
+          </div>
 
           {currentStep === 1 ? (
-            <form onSubmit={advanceStage} className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              
-              <div className="w-full rounded-lg border border-slate-300 hover:border-slate-400 transition-colors bg-white overflow-hidden shadow-sm">
-                <GoogleLogin onSuccess={initializeGoogleBridge} onError={() => toast.error('Google Authentication Cancelled')} theme="outline" size="large" text="continue_with" width="100%"/>
-              </div>
-              
-              <div className="flex items-center gap-4 my-6">
-                <div className="h-px bg-slate-200 flex-1"></div>
-                <span className="text-xs font-medium text-slate-400 whitespace-nowrap">Or register with email</span>
-                <div className="h-px bg-slate-200 flex-1"></div>
-              </div>
+            <div className="animate-in fade-in slide-in-from-right-4 duration-500 pt-8">
+              <h3 className="text-[28px] font-extrabold text-[#064e3b] mb-8 tracking-tight">Create NGO Account</h3>
+              <form onSubmit={handleNext} className="space-y-5">
+                <div>
+                  <label className={labelClasses}>Email Address</label>
+                  <input type="email" name="email" required value={formState.email} onChange={syncInput} className={inputClasses} placeholder="admin@ngo.org" />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <div>
+                    <label className={labelClasses}>Password</label>
+                    <input type="password" name="password" required minLength="8" value={formState.password} onChange={syncInput} className={inputClasses} placeholder="••••••••" />
+                  </div>
+                  <div>
+                    <label className={labelClasses}>Confirm Password</label>
+                    <input type="password" name="confirmPassword" required minLength="8" value={formState.confirmPassword} onChange={syncInput} className={inputClasses} placeholder="••••••••" />
+                  </div>
+                </div>
 
-              <InputField label="Email Address" name="email" type="email" value={formState.email} onChange={syncInput} placeholder="name@organization.org" />
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <InputField label="Password" name="password" type="password" value={formState.password} onChange={syncInput} placeholder="••••••••" />
-                <InputField label="Confirm Password" name="confirmPassword" type="password" value={formState.confirmPassword} onChange={syncInput} placeholder="••••••••" />
-              </div>
-              
-              <div className="pt-2">
-                <button type="submit" className="w-full py-2.5 bg-indigo-600 text-white rounded-lg font-semibold text-sm shadow-sm hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2">
-                  Continue to Profile
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                <button type="submit" disabled={isProcessing} className={`w-full py-4 mt-4 rounded-full text-[15px] font-extrabold shadow-[0_4px_14px_rgba(16,185,129,0.3)] transition-all duration-300 flex items-center justify-center gap-2 ${isProcessing ? 'bg-[#10b981]/70 text-white cursor-not-allowed' : 'bg-[#10b981] text-white hover:bg-[#059669] hover:-translate-y-0.5'}`}>
+                  {isProcessing ? <div className="w-5 h-5 border-[3px] border-white/30 border-t-white rounded-full animate-spin"></div> : 'Continue to Organization Details'}
+                  {!isProcessing && <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>}
                 </button>
-              </div>
-
-              <p className="text-center text-sm text-slate-500 mt-6">
-                Already have an account? <Link to="/login" className="font-semibold text-indigo-600 hover:text-indigo-500 transition-colors">Sign in here</Link>
-              </p>
-            </form>
-          ) : (
-            <form onSubmit={finalizeOnboarding} className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
-              <InputField label="Organization Name" name="name" value={formState.name} onChange={syncInput} placeholder="Legal NGO Name" />
+              </form>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <InputField label="Mobile Number" name="mobile" type="tel" value={formState.mobile} onChange={syncInput} placeholder="+91 98765 43210" />
-                <InputField label="Website (Optional)" name="website" type="url" required={false} value={formState.website} onChange={syncInput} placeholder="https://www.example.org" />
+              <div className="mt-10 flex items-center gap-4 before:h-px before:flex-1 before:bg-[#e8f0eb] after:h-px after:flex-1 after:bg-[#e8f0eb]">
+                  <span className="text-[11px] font-extrabold text-[#82a38e] uppercase tracking-wider">OR SSO LOGIN</span>
               </div>
+              <div className="mt-8 flex justify-center w-full [&>div]:w-full [&_iframe]:w-full overflow-hidden rounded-[1.5rem] border border-[#e8f0eb] hover:border-[#d1fae5] transition-colors bg-[#f4f7f4]">
+                  <GoogleLogin 
+                      onSuccess={handleGoogleSuccess} 
+                      onError={() => toast.error('Google Sign In failed')} 
+                      text="signup_with"
+                      shape="rectangular"
+                      size="large"
+                      width="100%"
+                  />
+              </div>
+            </div>
+          ) : (
+            <div className="animate-in fade-in slide-in-from-right-4 duration-500 pt-8">
+              <h3 className="text-[28px] font-extrabold text-[#064e3b] tracking-tight">Organization Details</h3>
+              <p className="text-[14.5px] font-medium text-[#4a6b56] mb-8">Where will you be receiving food?</p>
+              
+              <form onSubmit={requestOTPAndSubmit} className="space-y-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <div>
+                    <label className={labelClasses}>Organization Name</label>
+                    <input type="text" name="name" required value={formState.name} onChange={syncInput} placeholder="Hope Foundation" className={inputClasses}/>
+                  </div>
+                  <div>
+                    <label className={labelClasses}>Contact Mobile</label>
+                    <input type="tel" name="mobile" required value={formState.mobile} onChange={syncInput} placeholder="+91 98765 43210" className={inputClasses}/>
+                  </div>
+                </div>
 
-              <div className="pt-4 border-t border-slate-100">
-                <h4 className="text-sm font-semibold text-slate-900 mb-4">Location Configuration</h4>
-                <div className="space-y-5">
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-semibold text-slate-700">State</label>
-                      <select name="state" required value={formState.state} onChange={syncInput} className="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm font-medium outline-none cursor-pointer focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
-                        <option value="">Select State</option>
-                        {states.map(s => <option key={s.state} value={s.state}>{s.state}</option>)}
-                      </select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-semibold text-slate-700">District</label>
-                      <select name="district" required value={formState.district} onChange={syncInput} disabled={!formState.state} className="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm font-medium outline-none disabled:opacity-50 cursor-pointer focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
-                        <option value="">Select District</option>
-                        {districts.map(d => <option key={d} value={d}>{d}</option>)}
-                      </select>
-                    </div>
-                    <div className="space-y-1.5 sm:col-span-2">
-                      <label className="block text-xs font-semibold text-slate-700">City / Town</label>
-                      <input type="text" name="city" required value={formState.city} onChange={syncInput} placeholder="Specific city..." className="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"/>
-                    </div>
-                            <InputField label="Street Address" name="address" value={formState.address} onChange={syncInput} placeholder="HQ or Main Hub Address" />
-          
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 bg-[#fbfdfb] p-5 rounded-[2rem] border border-[#e8f0eb]">
+                   <div>
+                    <label className={labelClasses}>State</label>
+                    <select name="state" required value={formState.state} onChange={syncInput} className={`${inputClasses} cursor-pointer`}>
+                      <option value="">Select State</option>
+                      {states.map(s => <option key={s.state} value={s.state}>{s.state}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelClasses}>District</label>
+                    <select name="district" required value={formState.district} onChange={syncInput} disabled={!formState.state} className={`${inputClasses} cursor-pointer disabled:opacity-50`}>
+                      <option value="">Select District</option>
+                      {districts.map(d => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelClasses}>City / Town</label>
+                    <input type="text" name="city" required value={formState.city} onChange={syncInput} className={inputClasses} />
+                  </div>
+                  <div>
+                    <label className={labelClasses}>Street Address</label>
+                    <input type="text" name="address" required value={formState.address} onChange={syncInput} placeholder="Building, Street name" className={inputClasses} />
                   </div>
 
-                  {/* Clean Map UI */}
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="block text-sm font-semibold text-slate-700">HQ Pin Location</label>
-                      {!mapPosition ? (
-                        <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">Recommended</span>
-                      ) : (
-                        <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">Saved</span>
-                      )}
-                    </div>
-                    <div className="h-[220px] w-full rounded-lg overflow-hidden border border-slate-300 relative z-10 shadow-sm">
-                      <MapContainer center={[20.5937, 78.9629]} zoom={5} scrollWheelZoom={true} style={{ height: "100%", width: "100%" }}>
-                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap' />
+                  <div className="sm:col-span-2 mt-2 relative">
+                    <label className={`${labelClasses} mb-3 flex justify-between`}>
+                        Confirm Hub Location
+                        {!mapPosition && <span className="text-[#e11d48] animate-pulse">Required</span>}
+                    </label>
+                    <div className="h-44 w-full rounded-[1.5rem] overflow-hidden border-4 border-[#f4f7f4] shadow-sm relative z-10 group">
+                      <MapContainer center={mapPosition || [20.5937, 78.9629]} zoom={mapPosition ? 14 : 5} scrollWheelZoom={false} style={{ height: "100%", width: "100%" }}>
+                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                         <MapUpdater position={mapPosition} />
                         <LocationPicker position={mapPosition} setPosition={setMapPosition} lastAction={lastAction} />
                       </MapContainer>
+                      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-[#064e3b]/90 backdrop-blur-md text-white px-4 py-2 rounded-full text-[11px] font-bold shadow-xl pointer-events-none z-[400] whitespace-nowrap opacity-90 group-hover:opacity-100 transition-opacity">
+                         Drag pin to operational hub
+                      </div>
                     </div>
-                    <p className="text-xs text-slate-500 mt-1.5 flex items-center gap-1.5">
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                      Auto-pins to your address. Drag map pin to your exact facility for better matching.
-                    </p>
                   </div>
                 </div>
-              </div>
 
-              <div className="space-y-1.5 pt-4 border-t border-slate-100">
-                <label className="block text-sm font-semibold text-slate-700">Mission Statement</label>
-                <textarea name="mission" rows="3" required value={formState.mission} onChange={syncInput} placeholder="Briefly describe your organization's core focus..." className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-900 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 resize-none placeholder:text-slate-400"/>
-              </div>
+                <div>
+                  <label className={labelClasses}>Mission Statement</label>
+                  <textarea name="mission" rows="3" required value={formState.mission} onChange={syncInput} placeholder="Briefly describe your focus..." className={`${inputClasses} rounded-[1.5rem] resize-none`}/>
+                </div>
 
-              <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => setCurrentStep(1)} className="w-1/3 py-2.5 bg-white border border-slate-300 text-slate-700 rounded-lg font-semibold text-sm shadow-sm hover:bg-slate-50 transition-colors">
-                  Back
-                </button>
-                <button type="submit" disabled={isProcessing} className={`w-2/3 py-2.5 rounded-lg font-semibold text-sm shadow-sm transition-all flex items-center justify-center gap-2 ${isProcessing ? 'bg-indigo-400 text-white cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-[0.98]'}`}>
-                  {isProcessing ? (
-                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  ) : 'Complete Setup'}
-                </button>
-              </div>
-            </form>
+                <div className="flex gap-4 pt-4">
+                  <button type="button" onClick={() => setCurrentStep(1)} className="w-1/3 py-4 bg-[#f4f7f4] text-[#4a6b56] rounded-full font-bold text-[14.5px] hover:bg-[#e8f0eb] hover:text-[#064e3b] transition-colors">
+                    Back
+                  </button>
+                  <button type="submit" disabled={isProcessing} className={`w-2/3 py-4 rounded-full text-[15px] font-extrabold shadow-[0_4px_14px_rgba(16,185,129,0.3)] transition-all duration-300 flex items-center justify-center gap-2 ${isProcessing ? 'bg-[#10b981]/70 text-white cursor-not-allowed' : 'bg-[#10b981] text-white hover:bg-[#059669] hover:-translate-y-0.5'}`}>
+                    {isProcessing ? <div className="w-5 h-5 border-[3px] border-white/30 border-t-white rounded-full animate-spin"></div> : 'Send Verification OTP'}
+                  </button>
+                </div>
+              </form>
+            </div>
           )}
         </div>
-      </main>
+      </div>
+
+      {/* OTP MODAL OVERLAY */}
+      {showOTPModal && (
+          <div className="fixed inset-0 bg-[#064e3b]/20 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
+              <div className="bg-white rounded-[2rem] shadow-[0_20px_40px_rgb(0,0,0,0.1)] p-8 sm:p-10 max-w-[420px] w-full text-center border border-[#e8f0eb]">
+                  <div className="w-20 h-20 bg-[#ecfdf5] text-[#10b981] rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+                      <svg className="w-10 h-10" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                  </div>
+                  <h3 className="text-2xl font-extrabold text-[#064e3b] mb-2">Verify your Email</h3>
+                  <p className="text-[14.5px] font-medium text-[#4a6b56] mb-8 leading-relaxed">
+                      We sent a 6-digit code to <br/>
+                      <span className="font-extrabold text-[#064e3b]">{formState.email}</span>
+                  </p>
+                  
+                  <input 
+                      type="text" 
+                      maxLength="6"
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                      className="w-full bg-[#f4f7f4] border-2 border-transparent rounded-[1.5rem] px-5 py-4 text-center text-[28px] font-black tracking-[0.5em] text-[#064e3b] outline-none focus:bg-white focus:border-[#10b981]/30 focus:ring-4 focus:ring-[#10b981]/10 transition-all mb-8 shadow-inner shadow-black/[0.01]"
+                      placeholder="------"
+                  />
+                  
+                  <div className="flex gap-3">
+                      <button onClick={() => setShowOTPModal(false)} className="w-1/3 py-4 bg-[#f4f7f4] text-[#4a6b56] rounded-full font-bold text-[14.5px] hover:bg-[#e8f0eb] hover:text-[#064e3b] transition-colors">
+                          Cancel
+                      </button>
+                      <button onClick={verifyAndRegister} disabled={isProcessing || otpCode.length !== 6} className="w-2/3 py-4 bg-[#10b981] text-white rounded-full font-bold text-[14.5px] shadow-[0_4px_14px_rgba(16,185,129,0.3)] hover:bg-[#059669] hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-50 disabled:transform-none flex items-center justify-center">
+                          {isProcessing ? <div className="w-5 h-5 border-[3px] border-white/30 border-t-white rounded-full animate-spin"></div> : 'Verify & Create'}
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
     </div>
   );
 };

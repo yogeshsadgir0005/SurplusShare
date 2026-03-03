@@ -4,7 +4,8 @@ const claimSchema = new mongoose.Schema({
   ngoId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   ngoName: { type: String },
   ngoPhone: { type: String },
-  status: { type: String, enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending' }
+  // ADDED 'Completed' to the enum
+  status: { type: String, enum: ['Pending', 'Approved', 'Rejected', 'Completed'], default: 'Pending' }
 });
 
 const scheduledDaySchema = new mongoose.Schema({
@@ -25,8 +26,8 @@ const postSchema = new mongoose.Schema({
   shelfLife: { type: String, required: true },
   category: { type: String, required: true },
   image: { type: String },
-  pickupDate: { type: String }, // NEW: Separated Date
-  pickupTime: { type: String }, // NEW: Separated Time
+  pickupDate: { type: String }, 
+  pickupTime: { type: String }, 
   contactName: { type: String, required: true },
   contactPhone: { type: String, required: true },
   specialInstructions: { type: String },

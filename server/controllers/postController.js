@@ -97,7 +97,6 @@ const getActivePosts = async (req, res) => {
     const user = await User.findById(req.user._id);
     const posts = await Post.find({ status: 'Active' }).populate('supplierId', 'supplierDetails.legalName').lean();
 
-    // DYNAMIC FILTERING FOR SCHEDULED POSTS (Bug 1 Fix)
     const now = new Date();
     const currentDay = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long' }).format(now);
     const currentTime = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: false }).format(now);
@@ -107,7 +106,6 @@ const getActivePosts = async (req, res) => {
       if (p.type === 'Scheduled') {
          const todaySchedule = p.scheduledDays?.find(d => d.day === currentDay && d.isActive);
          if (!todaySchedule) return false;
-         // It only shows up if the current time is between the release time and the deadline time
          if (currentTime >= todaySchedule.postTime && currentTime <= todaySchedule.deadlineTime) return true;
          return false;
       }
@@ -178,12 +176,10 @@ const updatePost = async (req, res) => {
         }
       });
 
-      // Handle parsing stringified array from FormData
       if (req.body.scheduledDays) {
          post.scheduledDays = typeof req.body.scheduledDays === 'string' ? JSON.parse(req.body.scheduledDays) : req.body.scheduledDays;
       }
 
-      // Handle new image upload
       if (req.file) {
          post.image = `/uploads/${req.file.filename}`;
       }
@@ -256,21 +252,207 @@ const getSupplierDashboardMetrics = async (req, res) => {
 const getNgoDashboardMetrics = async (req, res) => {
   try {
     const ngoId = req.user._id;
-    const allNgoPosts = await Post.find({ "claims.ngoId": ngoId });
-    let savedKgs = 0, activeClaims = 0;
 
+    // 1. Fetch only posts the NGO has actually claimed (for Personal Stats, Charts, and Goals)
+    const allNgoPosts = await Post.find({ "claims.ngoId": ngoId }).populate('supplierId', 'supplierDetails.legalName');
+    
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+    const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+
+    let savedKgs = 0, activeClaimsCount = 0;
+    let currentMonthKgs = 0, prevMonthKgs = 0;
+    let currentMonthClaims = 0, prevMonthClaims = 0;
+    let currentMonthPartners = new Set(), prevMonthPartners = new Set();
+    let uniquePartners = new Set();
+    
+    let totalApprovedClaims = 0;
+    let totalRejectedClaims = 0;
+
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    let monthlyData = Array.from({ length: 12 }, (_, i) => ({ name: monthNames[i], meals: 0, weight: 0 }));
+    
+    // Process NGO's Personal Stats
     allNgoPosts.forEach(post => {
       const myClaim = post.claims.find(c => c.ngoId.toString() === ngoId.toString());
       if (myClaim) {
-        if (myClaim.status === 'Approved') savedKgs += post.weight; 
-        if ((myClaim.status === 'Pending' || myClaim.status === 'Approved') && post.status !== 'Expired') activeClaims++;
+        
+        const postDate = new Date(post.updatedAt);
+        const isCurrentMonth = postDate.getMonth() === currentMonth && postDate.getFullYear() === currentYear;
+        const isPrevMonth = postDate.getMonth() === prevMonth && postDate.getFullYear() === prevYear;
+
+        if (post.supplierId?._id) {
+            uniquePartners.add(post.supplierId._id.toString());
+        }
+        
+        const isSuccess = myClaim.status === 'Approved' || myClaim.status === 'Completed';
+
+        if (isSuccess) totalApprovedClaims++;
+        if (myClaim.status === 'Rejected') totalRejectedClaims++;
+
+        if (isSuccess) {
+          savedKgs += post.weight; 
+          
+          if (isCurrentMonth) currentMonthKgs += post.weight;
+          if (isPrevMonth) prevMonthKgs += post.weight;
+
+          if (postDate.getFullYear() === currentYear) {
+            const mIndex = postDate.getMonth();
+            monthlyData[mIndex].weight += post.weight;
+            monthlyData[mIndex].meals += Math.floor((post.weight * 1000) / 400);
+          }
+        }
+        
+        if ((myClaim.status === 'Pending' || myClaim.status === 'Approved') && post.status !== 'Expired') {
+          activeClaimsCount++;
+        }
+
+        if (isCurrentMonth) {
+            currentMonthClaims++;
+            if (post.supplierId?._id) currentMonthPartners.add(post.supplierId._id.toString());
+        }
+        if (isPrevMonth) {
+            prevMonthClaims++;
+            if (post.supplierId?._id) prevMonthPartners.add(post.supplierId._id.toString());
+        }
       }
     });
 
+    // 2. Fetch network Active posts AND our active claims (for the "Upcoming Pickups" Radar feed)
+    const activeNetworkPosts = await Post.find({
+        $or: [
+            { status: 'Active' },
+            { "claims.ngoId": ngoId, "claims.status": { $in: ['Pending', 'Approved'] } }
+        ]
+    }).populate('supplierId', 'supplierDetails.legalName');
+
+    let upcomingPickupsRaw = [];
+    const currentDayNum = now.getDay();
+    const currentTimeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+    const dayMap = { 'Sunday': 0, 'Monday': 1, 'Tuesday': 2, 'Wednesday': 3, 'Thursday': 4, 'Friday': 5, 'Saturday': 6 };
+
+    activeNetworkPosts.forEach(post => {
+      const myClaim = post.claims.find(c => c.ngoId.toString() === ngoId.toString());
+
+      // Hide if the NGO already completed or got rejected for it
+      if (myClaim && (myClaim.status === 'Completed' || myClaim.status === 'Rejected')) return;
+      // Hide if expired, UNLESS we hold an approved claim on it
+      if (post.status === 'Expired' && (!myClaim || myClaim.status !== 'Approved')) return;
+
+      const isUrgent = post.shelfLife && post.shelfLife.toLowerCase().includes('hour');
+      let formattedTime = 'Schedule Pending';
+      let targetDayNum = -1;
+      let nextTimeStr = '23:59';
+
+      if (post.type === 'Scheduled' && post.scheduledDays && post.scheduledDays.length > 0) {
+        let minDaysDiff = 7;
+        post.scheduledDays.forEach(d => {
+            if (d.isActive) {
+                const dNum = dayMap[d.day];
+                if (dNum !== undefined) {
+                    let diff = (dNum - currentDayNum + 7) % 7;
+                    if (diff === 0 && d.deadlineTime && d.deadlineTime < currentTimeStr) diff = 7;
+                    
+                    if (diff < minDaysDiff) {
+                        minDaysDiff = diff;
+                        targetDayNum = dNum;
+                        nextTimeStr = d.deadlineTime || '23:59';
+                    }
+                }
+            }
+        });
+        
+        const activeDays = post.scheduledDays.filter(d => d.isActive).map(d => d.day.substring(0,3)).join(', ');
+        formattedTime = activeDays ? `${activeDays} ${nextTimeStr}`.trim() : 'Schedule Pending';
+        if (targetDayNum === -1) targetDayNum = new Date(post.updatedAt).getDay();
+
+      } else if (post.pickupDate) {
+        const dateObj = new Date(post.pickupDate);
+        if (!isNaN(dateObj.getTime())) {
+            targetDayNum = dateObj.getDay();
+            nextTimeStr = post.pickupTime || '23:59';
+            const dayOfWeek = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
+            formattedTime = `${dayOfWeek} ${post.pickupTime || ''}`.trim();
+        } else {
+            targetDayNum = new Date(post.updatedAt).getDay();
+            formattedTime = `${post.pickupDate} ${post.pickupTime || ''}`.trim();
+        }
+      } else {
+        targetDayNum = new Date(post.updatedAt).getDay();
+      }
+
+      const daysFromToday = (targetDayNum - currentDayNum + 7) % 7;
+      const sortDate = new Date(now.getTime());
+      sortDate.setDate(now.getDate() + daysFromToday);
+      const [hh, mm] = nextTimeStr.split(':');
+      sortDate.setHours(parseInt(hh||23), parseInt(mm||59), 0, 0);
+
+      upcomingPickupsRaw.push({
+        id: post._id,
+        title: post.supplierId?.supplierDetails?.legalName || 'Unknown Supplier',
+        address: post.pickupAddress || `${post.city}, ${post.state}`,
+        time: formattedTime, 
+        amount: `${post.weight} kg ${post.category}`,
+        urgent: isUrgent,
+        isRed: isUrgent || (myClaim && myClaim.status === 'Pending'),
+        rawDate: sortDate.getTime()
+      });
+    });
+
+    // --- 3. FINAL CALCULATIONS ---
     const mealsProvided = Math.floor((savedKgs * 1000) / 400);
+    const currentMonthMeals = Math.floor((currentMonthKgs * 1000) / 400);
+    const prevMonthMeals = Math.floor((prevMonthKgs * 1000) / 400);
+
+    const calcTrend = (curr, prev) => {
+        if (prev === 0) return curr > 0 ? '+100%' : '+0%';
+        const pct = Math.round(((curr - prev) / prev) * 100);
+        return pct >= 0 ? `+${pct}%` : `${pct}%`;
+    };
+
+    const finalStats = {
+        activeClaims: { value: activeClaimsCount, label: 'shipments', trend: `${calcTrend(currentMonthClaims, prevMonthClaims)} this month` },
+        mealsProvided: { value: mealsProvided, label: 'meals', trend: `${calcTrend(currentMonthMeals, prevMonthMeals)} this month` },
+        foodRescued: { value: savedKgs, label: 'kg', trend: `${calcTrend(currentMonthKgs, prevMonthKgs)} this month` },
+        networkGrowth: { value: uniquePartners.size, label: 'partners', trend: `${calcTrend(currentMonthPartners.size, prevMonthPartners.size)} this month` }
+    };
+
+    const totalHandledClaims = totalApprovedClaims + totalRejectedClaims;
+    const zeroWasteScore = totalHandledClaims > 0 
+        ? Math.round((totalApprovedClaims / totalHandledClaims) * 100) 
+        : 0;
+
+    const dynamicGoals = {
+        monthlyRescue: {
+            current: currentMonthMeals,
+            percent: Math.min(100, Math.round((currentMonthMeals / 2000) * 100))
+        },
+        networkPartners: {
+            current: uniquePartners.size,
+            percent: Math.min(100, Math.round((uniquePartners.size / 50) * 100))
+        },
+        zeroWaste: {
+            current: zeroWasteScore,
+            percent: zeroWasteScore
+        },
+        communityImpact: {
+            current: mealsProvided, // 1 meal = 1 person impacted
+            percent: Math.min(100, Math.round((mealsProvided / 5000) * 100))
+        }
+    };
+
+    const chartData = monthlyData.slice(0, currentMonth + 1).map(data => ({ name: data.name, meals: data.meals, weight: data.weight }));
+
+    upcomingPickupsRaw.sort((a, b) => a.rawDate - b.rawDate);
+    const upcomingPickups = upcomingPickupsRaw.slice(0, 3).map(u => {
+        const { rawDate, ...rest } = u; 
+        return rest;
+    });
 
     const timeSince = (date) => {
-      const seconds = Math.floor((new Date() - date) / 1000);
+      const seconds = Math.floor((now - date) / 1000);
       let interval = seconds / 86400; if (interval > 1) return Math.floor(interval) + " days ago";
       interval = seconds / 3600; if (interval > 1) return Math.floor(interval) + " hours ago";
       interval = seconds / 60; if (interval > 1) return Math.floor(interval) + " mins ago";
@@ -288,9 +470,10 @@ const getNgoDashboardMetrics = async (req, res) => {
       if (myClaim.status === 'Pending') actionText = `Requested ${post.weight}kg of ${post.category}`;
       else if (myClaim.status === 'Approved') actionText = `Claim approved for ${post.weight}kg`;
       else if (myClaim.status === 'Rejected') actionText = `Request declined for ${post.category}`;
+      else if (myClaim.status === 'Completed') actionText = `Successfully picked up ${post.weight}kg`;
 
       return { 
-        _id: post._id, 
+        id: post._id, 
         supplier: post.supplierId?.supplierDetails?.legalName || 'System', 
         action: actionText, 
         time: timeSince(new Date(post.updatedAt)),
@@ -298,7 +481,152 @@ const getNgoDashboardMetrics = async (req, res) => {
       };
     });
 
-    res.json({ stats: { activeClaims, mealsProvided, savedKgs }, feed: feed.length > 0 ? feed : [] });
+    res.json({ 
+      stats: finalStats, 
+      goals: dynamicGoals, 
+      feed: feed.length > 0 ? feed : [],
+      chartData: chartData,
+      upcomingPickups: upcomingPickups
+    });
+    
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const getNgoClaims = async (req, res) => {
+  try {
+    const ngoId = req.user._id;
+    // FETCH ALL CLAIMS: Removed the status filter so Completed and Rejected flow to the frontend
+    const posts = await Post.find({ 
+        "claims.ngoId": ngoId
+    }).populate('supplierId', 'supplierDetails.legalName').sort({ updatedAt: -1 });
+
+    const claims = posts.map(post => {
+      const myClaim = post.claims.find(c => c.ngoId.toString() === ngoId.toString());
+      
+      let formattedTime = 'Schedule Pending';
+      if (post.type === 'Scheduled' && post.scheduledDays?.length > 0) {
+          const activeDays = post.scheduledDays.filter(d => d.isActive).map(d => d.day.substring(0,3)).join(', ');
+          const time = post.scheduledDays.find(d => d.isActive)?.deadlineTime || '';
+          formattedTime = activeDays ? `${activeDays} ${time}`.trim() : 'Schedule Pending';
+      } else if (post.pickupDate) {
+          const dateObj = new Date(post.pickupDate);
+          if (!isNaN(dateObj.getTime())) {
+              const dayOfWeek = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+              formattedTime = `${dayOfWeek} ${post.pickupTime || ''}`.trim();
+          } else {
+              formattedTime = `${post.pickupDate} ${post.pickupTime || ''}`.trim();
+          }
+      }
+
+      return {
+        id: post._id,
+        supplier: post.supplierId?.supplierDetails?.legalName || 'Unknown Supplier',
+        category: post.category,
+        weight: post.weight,
+        status: myClaim.status,
+        date: formattedTime,
+        address: post.pickupAddress || `${post.city}, ${post.state}`
+      };
+    });
+
+    res.json(claims);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const markClaimCompleted = async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ message: 'Post not found' });
+
+    const claim = post.claims.find(c => c.ngoId.toString() === req.user._id.toString());
+    if (claim && claim.status === 'Approved') {
+        claim.status = 'Completed';
+        await post.save();
+        res.json({ success: true, message: 'Pickup marked as completed' });
+    } else {
+        res.status(400).json({ message: 'Claim cannot be completed. It may not be approved yet.' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const getNgoHistory = async (req, res) => {
+  try {
+    const ngoId = req.user._id;
+    const posts = await Post.find({ 
+        "claims.ngoId": ngoId,
+        "claims.status": { $in: ['Completed', 'Rejected'] }
+    }).populate('supplierId', 'supplierDetails.legalName').sort({ updatedAt: -1 });
+
+    const history = posts.map(post => {
+      const myClaim = post.claims.find(c => c.ngoId.toString() === ngoId.toString());
+      const dateObj = new Date(post.updatedAt);
+      
+      return {
+        id: post._id.toString().slice(-6).toUpperCase(),
+        rawId: post._id,
+        date: dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        supplier: post.supplierId?.supplierDetails?.legalName || 'Unknown Supplier',
+        items: post.category,
+        weight: `${post.weight} kg`,
+        status: myClaim.status
+      };
+    });
+
+    res.json(history);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const getNgoImpact = async (req, res) => {
+  try {
+    const ngoId = req.user._id;
+    const posts = await Post.find({ "claims.ngoId": ngoId, "claims.status": { $in: ['Approved', 'Completed'] } });
+
+    let totalWeight = 0;
+    let categoryMap = {};
+    
+    const currentYear = new Date().getFullYear();
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    let monthlyDataArray = Array.from({ length: 12 }, (_, i) => ({ name: monthNames[i], co2: 0, water: 0, _rawWeight: 0 }));
+
+    posts.forEach(post => {
+        totalWeight += post.weight;
+        
+        categoryMap[post.category] = (categoryMap[post.category] || 0) + post.weight;
+
+        const d = new Date(post.updatedAt);
+        if (d.getFullYear() === currentYear) {
+            monthlyDataArray[d.getMonth()]._rawWeight += post.weight;
+        }
+    });
+
+    const totals = {
+        co2: (totalWeight * 2.5).toLocaleString(),
+        water: (totalWeight * 1000).toLocaleString(),
+        meals: Math.floor(totalWeight * 2.5).toLocaleString(),
+        financial: "$" + (totalWeight * 5).toLocaleString()
+    };
+
+    const currentMonth = new Date().getMonth();
+    const monthlyData = monthlyDataArray.slice(0, currentMonth + 1).map(m => ({
+        name: m.name,
+        co2: Math.round(m._rawWeight * 2.5),
+        water: Math.round(m._rawWeight * 1000)
+    }));
+
+    const categoryData = Object.keys(categoryMap).map(key => ({
+        name: key,
+        amount: categoryMap[key]
+    })).sort((a, b) => b.amount - a.amount);
+
+    res.json({ totals, monthlyData, categoryData });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -306,5 +634,6 @@ const getNgoDashboardMetrics = async (req, res) => {
 
 module.exports = { 
   createPost, getActivePosts, getSupplierPosts, getPostById, updatePost, updatePostStatus, 
-  claimPost, manageClaim, getSupplierDashboardMetrics, getNgoDashboardMetrics, getLeaderboard
+  claimPost, manageClaim, getSupplierDashboardMetrics, getNgoDashboardMetrics, getLeaderboard,
+  getNgoClaims, markClaimCompleted, getNgoHistory, getNgoImpact
 };

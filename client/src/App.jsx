@@ -6,34 +6,32 @@ import Login from './pages/Login';
 import SignupNGO from './pages/SignupNGO';
 import SignupSupplier from './pages/SignupSupplier';
 import DashboardSupplier from './pages/DashboardSupplier';
-import DashboardNGO from './pages/DashboardNGO';
-import ListingsNGO from './pages/ListingsNGO';
+import HistorySupplier from './pages/HistorySupplier';
 import PostFood from './pages/PostFood';
 import ScheduleDonation from './pages/ScheduleDonation';
-import HistorySupplier from './pages/HistorySupplier';
 import ManagePost from './pages/ManagePost';
+import SettingsSupplier from './pages/SettingsSupplier';
+
+// NGO Pages
+import DashboardNGO from './pages/DashboardNGO';
+import ListingsNGO from './pages/ListingsNGO';
 import FoodDetailNGO from './pages/FoodDetailNGO';
+import SettingsNGO from './pages/SettingsNGO';
+import ClaimsNGO from './pages/ClaimsNGO';
+import HistoryNGO from './pages/HistoryNGO';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID_HERE.apps.googleusercontent.com';
 
-// Guard: Only for logged-out users (Prevents logged-in users from seeing login/signup)
 const AuthRoute = ({ children }) => {
   const user = JSON.parse(localStorage.getItem('user'));
-  if (user) {
-    return <Navigate to={user.role === 'NGO' ? '/ngo/dashboard' : '/supplier/dashboard'} replace />;
-  }
+  if (user) return <Navigate to={user.role === 'NGO' ? '/ngo/dashboard' : '/supplier/dashboard'} replace />;
   return children;
 };
 
-// Guard: Only for logged-in users (Prevents logged-out users from seeing dashboards)
 const ProtectedRoute = ({ children, allowedRole }) => {
   const user = JSON.parse(localStorage.getItem('user'));
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-  if (allowedRole && user.role !== allowedRole) {
-    return <Navigate to={user.role === 'NGO' ? '/ngo/dashboard' : '/supplier/dashboard'} replace />;
-  }
+  if (!user) return <Navigate to="/login" replace />;
+  if (allowedRole && user.role !== allowedRole) return <Navigate to={user.role === 'NGO' ? '/ngo/dashboard' : '/supplier/dashboard'} replace />;
   return children;
 };
 
@@ -52,25 +50,28 @@ function App() {
             }} 
           />
           <Routes>
-            {/* Public Route */}
             <Route path="/" element={<Landing />} />
-
-            {/* Auth Routes (Hidden if logged in) */}
             <Route path="/login" element={<AuthRoute><Login /></AuthRoute>} />
             <Route path="/signup/ngo" element={<AuthRoute><SignupNGO /></AuthRoute>} />
             <Route path="/signup/supplier" element={<AuthRoute><SignupSupplier /></AuthRoute>} />
 
-            {/* Supplier Protected Routes */}
+            {/* Supplier Routes */}
             <Route path="/supplier/dashboard" element={<ProtectedRoute allowedRole="Supplier"><DashboardSupplier /></ProtectedRoute>} />
             <Route path="/supplier/post" element={<ProtectedRoute allowedRole="Supplier"><PostFood /></ProtectedRoute>} />
             <Route path="/supplier/schedule" element={<ProtectedRoute allowedRole="Supplier"><ScheduleDonation /></ProtectedRoute>} />
             <Route path="/supplier/history" element={<ProtectedRoute allowedRole="Supplier"><HistorySupplier /></ProtectedRoute>} />
             <Route path="/supplier/manage/:id" element={<ProtectedRoute allowedRole="Supplier"><ManagePost /></ProtectedRoute>} />
+            <Route path="/supplier/settings" element={<ProtectedRoute allowedRole="Supplier"><SettingsSupplier /></ProtectedRoute>} />
 
-            {/* NGO Protected Routes */}
+            {/* NGO Routes */}
             <Route path="/ngo/dashboard" element={<ProtectedRoute allowedRole="NGO"><DashboardNGO /></ProtectedRoute>} />
             <Route path="/ngo/listings" element={<ProtectedRoute allowedRole="NGO"><ListingsNGO /></ProtectedRoute>} />
             <Route path="/ngo/food/:id" element={<ProtectedRoute allowedRole="NGO"><FoodDetailNGO /></ProtectedRoute>} />
+            <Route path="/ngo/settings" element={<ProtectedRoute allowedRole="NGO"><SettingsNGO /></ProtectedRoute>} />
+            
+            {/* NEW NGO Pages */}
+            <Route path="/ngo/claims" element={<ProtectedRoute allowedRole="NGO"><ClaimsNGO /></ProtectedRoute>} />
+            <Route path="/ngo/history" element={<ProtectedRoute allowedRole="NGO"><HistoryNGO /></ProtectedRoute>} />
           </Routes>
         </div>
       </Router>
