@@ -1,5 +1,5 @@
 const User = require('../models/User');
-const OTP = require('../models/OTP'); 
+const OTP = require('../models/otp'); 
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 const https = require('https'); // Used for both Nominatim and Brevo APIs
