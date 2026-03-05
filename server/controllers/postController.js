@@ -632,8 +632,39 @@ const getNgoImpact = async (req, res) => {
   }
 };
 
+// Add this function inside postController.js
+
+const getLandingPageMetrics = async (req, res) => {
+  try {
+    // 1. Calculate Kilos Saved (Total weight of 'Claimed' posts)
+    const weightAggregation = await Post.aggregate([
+      { $match: { status: 'Claimed' } },
+      { $group: { _id: null, totalWeight: { $sum: '$weight' } } }
+    ]);
+    const kilosSaved = weightAggregation.length > 0 ? weightAggregation[0].totalWeight : 0;
+
+    // 2. Calculate Meals Redirected (Standardized logic: 400g per meal)
+    const mealsRedirected = Math.floor((kilosSaved * 1000) / 400);
+
+    // 3. Count Verified Donors & NGO Partners
+    const donorsCount = await User.countDocuments({ role: 'Supplier' });
+    const ngosCount = await User.countDocuments({ role: 'NGO' });
+
+    res.json({
+      kilosSaved,
+      mealsRedirected,
+      donorsCount,
+      ngosCount
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Update your module.exports at the bottom to include the new function
 module.exports = { 
   createPost, getActivePosts, getSupplierPosts, getPostById, updatePost, updatePostStatus, 
   claimPost, manageClaim, getSupplierDashboardMetrics, getNgoDashboardMetrics, getLeaderboard,
-  getNgoClaims, markClaimCompleted, getNgoHistory, getNgoImpact
+  getNgoClaims, markClaimCompleted, getNgoHistory, getNgoImpact, 
+  getLandingPageMetrics // <-- ADDED THIS
 };

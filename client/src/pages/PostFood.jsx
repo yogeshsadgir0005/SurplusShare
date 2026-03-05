@@ -249,9 +249,9 @@ const PostFood = () => {
                     </div>
                 </InputWrapper>
                 
-                <InputWrapper label="Shelf Life" icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z">
-                   <select name="shelfLife" required value={formData.shelfLife} onChange={handleInputChange} className={`${commonInputClass} cursor-pointer`}>
-                      <option value="">Select shelf life</option>
+                <InputWrapper label="Food Life" icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z">
+                   <select name="Food Life" required value={formData.shelfLife} onChange={handleInputChange} className={`${commonInputClass} cursor-pointer`}>
+                      <option value="">Select Food life</option>
                       <option>2 Hours</option>
                       <option>4 Hours</option>
                       <option>12 Hours</option>
@@ -274,7 +274,7 @@ const PostFood = () => {
 
             {/* Logistics & Location Section */}
             <section className="bg-white rounded-[2rem] border border-[#e8f0eb] shadow-[0_8px_30px_rgb(0,0,0,0.03)] p-6 sm:p-10 transition-all duration-500 hover:shadow-[0_15px_40px_rgb(0,0,0,0.04)]">
-               <h3 className="text-xl font-extrabold text-[#064e3b] mb-6 border-b border-[#e8f0eb] pb-4">Logistics & Location</h3>
+               <h3 className="text-xl font-extrabold text-[#064e3b] mb-6 border-b border-[#e8f0eb] pb-4">Pickup Location</h3>
            
                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
                   <InputWrapper label="State">
@@ -316,7 +316,7 @@ const PostFood = () => {
                       <LocationPicker position={mapPosition} setPosition={setMapPosition} lastAction={lastAction} />
                     </MapContainer>
                     <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-[#064e3b]/90 backdrop-blur-md text-white px-5 py-2.5 rounded-full text-[12px] font-bold shadow-xl pointer-events-none z-[400] whitespace-nowrap opacity-90 group-hover:opacity-100 transition-opacity">
-                         Drag pin to specific loading dock
+                         Drag pin to exact pickup location
                     </div>
                   </div>
                </div>

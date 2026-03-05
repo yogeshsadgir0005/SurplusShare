@@ -6,7 +6,7 @@ const {
   createPost, getActivePosts, getSupplierPosts, getPostById,
   updatePostStatus, updatePost, claimPost, manageClaim, 
   getSupplierDashboardMetrics, getNgoDashboardMetrics, getLeaderboard,
-  getNgoClaims, markClaimCompleted, getNgoHistory, getNgoImpact // <-- Imported
+  getNgoClaims, markClaimCompleted, getNgoHistory, getNgoImpact , getLandingPageMetrics
 } = require('../controllers/postController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -17,6 +17,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 router.get('/leaderboard', getLeaderboard);
+router.get('/landing-metrics', getLandingPageMetrics);
 
 router.route('/')
   .post(protect, upload.single('image'), createPost)
@@ -31,7 +32,6 @@ router.put('/:id/claim/manage', protect, manageClaim);
 // Dashboard routes
 router.get('/metrics', protect, getSupplierDashboardMetrics);
 router.get('/ngo/metrics', protect, getNgoDashboardMetrics);
-
 // NEW NGO Sub-Pages Routes
 router.get('/ngo/my-claims', protect, getNgoClaims);
 router.put('/ngo/claims/:id/complete', protect, markClaimCompleted);
