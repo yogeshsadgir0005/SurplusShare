@@ -249,17 +249,9 @@ const PostFood = () => {
                     </div>
                 </InputWrapper>
                 
-                <InputWrapper label="Food Life" icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z">
-                   <select name="Food Life" required value={formData.shelfLife} onChange={handleInputChange} className={`${commonInputClass} cursor-pointer`}>
-                      <option value="">Select Food life</option>
-                      <option>2 Hours</option>
-                      <option>4 Hours</option>
-                      <option>12 Hours</option>
-                      <option>24 Hours</option>
-                      <option>2-3 Days</option>
-                      <option>1 Week+</option>
-                   </select>
-                </InputWrapper>
+             <InputWrapper label="Food Life" icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z">
+                     <input type="text" name="shelfLife" required value={formData.shelfLife} onChange={handleInputChange} placeholder="e.g. Needs pickup within 4 hours" className={`${commonInputClass} placeholder:text-[#82a38e]`}/>
+                  </InputWrapper>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 border-t border-[#e8f0eb] pt-6 mt-6">
