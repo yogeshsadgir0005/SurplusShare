@@ -76,28 +76,7 @@ const ListingsNGO = () => {
   const customFilterSidebar = (isCollapsed) => (
     <div className="space-y-8 pb-8 pt-2">
       
-      {/* Search Input */}
-      <section>
-        {!isCollapsed && <h4 className="text-[11px] font-extrabold text-[#82a38e] uppercase tracking-wider mb-3 px-3 fade-in">Refine Search</h4>}
-        <div className="relative group px-2">
-          {isCollapsed ? (
-              <div className="w-12 h-12 mx-auto rounded-full bg-[#f4f7f4] flex items-center justify-center text-[#4a6b56] cursor-pointer hover:bg-[#e8f0eb] transition-colors" title="Search Filters">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-              </div>
-          ) : (
-              <div className="fade-in relative">
-                  <input 
-                    type="text" 
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Name or location..." 
-                    className="w-full bg-[#f4f7f4] border-none rounded-full px-5 py-3.5 text-[14.5px] font-bold text-[#064e3b] outline-none focus:ring-4 focus:ring-[#10b981]/20 transition-all placeholder:text-[#82a38e]"
-                  />
-                  <svg className="absolute right-5 top-3.5 w-5 h-5 text-[#82a38e]" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-              </div>
-          )}
-        </div>
-      </section>
+
 
       {/* Categories */}
       <section>
@@ -155,13 +134,24 @@ const ListingsNGO = () => {
             <p className="text-[15px] font-medium text-[#4a6b56] mt-1">Discover and claim available food donations in your operational area.</p>
           </div>
           
+                <div className="fade-in relative border-2 rounded-4xl border-[#064e3b]">
+                  <input 
+                    type="text" 
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Name or location..." 
+                    className="w-full bg-[#f4f7f4] border-none rounded-full px-5 py-3.5 text-[14.5px] font-bold text-[#064e3b] outline-none focus:ring-4 focus:ring-[#10b981]/20 transition-all placeholder:text-[#82a38e]"
+                  />
+                  <svg className="absolute right-5 top-3.5 w-5 h-5 text-[#82a38e]" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+              </div>
+
           <div className="flex items-center bg-white border border-[#e8f0eb] pl-2 pr-5 py-2 rounded-full shadow-[0_4px_15px_rgb(0,0,0,0.02)]">
             <div className="flex items-center gap-3">
                <div className="w-10 h-10 rounded-full bg-[#ecfdf5] text-[#10b981] flex items-center justify-center">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
                </div>
                <div className="flex flex-col">
-                   <span className="text-[10px] font-extrabold text-[#82a38e] uppercase tracking-wider">Available Loads</span>
+                   <span className="text-[10px] font-extrabold text-[#82a38e] uppercase tracking-wider">Available Drops</span>
                    <span className="text-xl font-black text-[#064e3b] leading-none">{filteredPosts.length}</span>
                </div>
             </div>

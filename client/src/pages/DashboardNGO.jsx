@@ -119,10 +119,7 @@ const DashboardNGO = () => {
           </div>
           
           <div className="flex items-center gap-3">
-            <button onClick={() => toast('No new notifications', { icon: '🔔', style: { borderRadius: '100px'} })} className="relative p-2.5 px-3 transition-all duration-300 bg-[#ecfdf5] text-[#059669] hover:bg-[#d1fae5] rounded-full">
-                <div className="absolute top-1.5 right-2.5 w-2.5 h-2.5 bg-[#ef4444] rounded-full border-2 border-white"></div>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
-            </button>
+       
             <button onClick={() => navigate('/ngo/listings')} className="px-6 py-2.5 transition-all duration-300 font-bold bg-[#10b981] text-white shadow-[0_4px_14px_rgba(16,185,129,0.3)] hover:bg-[#059669] rounded-full flex items-center gap-2">
                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/></svg>
              New Claim
