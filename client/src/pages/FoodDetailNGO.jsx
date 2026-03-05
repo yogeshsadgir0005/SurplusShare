@@ -159,10 +159,11 @@ const FoodDetailNGO = () => {
               <div className="grid grid-cols-2 gap-6 sm:gap-8 mb-10">
                  {[
                    { label: "Fresh For", val: resource.shelfLife, icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" },
-                   { label: "Pickup Deadline", val: resource.pickupDeadline || "ASAP", icon: "M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-10.714A9.535 9.535 0 003 12c0 1.291.256 2.523.721 3.647" },
+                   { label: "Pickup Date DeadLine", val: resource.pickupDate   || "ASAP", icon: "M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-10.714A9.535 9.535 0 003 12c0 1.291.256 2.523.721 3.647" },
+               { label: "Pickup Time DeadLine", val: resource.pickupTime   || "ASAP", icon: "M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-10.714A9.535 9.535 0 003 12c0 1.291.256 2.523.721 3.647" },
+        
                    { label: "Packaging", val: resource.packaging ? "YES" : "NO", icon: "M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" },
-                   { label: "Quality Assessment", val: "Tier 1", icon: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944" }
-                 ].map((stat, i) => (
+                           ].map((stat, i) => (
                    <div key={i} className="flex flex-col">
                       <div className="flex items-center gap-2 text-[#82a38e] mb-1.5">
                          <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d={stat.icon}/></svg>
