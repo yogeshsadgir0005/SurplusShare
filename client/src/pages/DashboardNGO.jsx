@@ -241,9 +241,9 @@ const DashboardNGO = () => {
             {/* Upcoming Pickups */}
             <div className="bg-white rounded-[2rem] border border-[#e8f0eb] shadow-[0_8px_30px_rgb(0,0,0,0.03)] hover:shadow-[0_20px_40px_rgb(0,0,0,0.06)] hover:-translate-y-1 transition-all duration-500 group flex flex-col">
                 <div className="p-6 lg:p-8 border-b border-black/5 flex justify-between items-center">
-                    <h3 className="text-xl font-extrabold text-[#064e3b]">Active Radar</h3>
-                    <span className="px-3 py-1 text-xs font-black uppercase tracking-wider flex items-center gap-1.5 rounded-full bg-[#fef2f2] text-[#e11d48]">
-                        <div className="w-2 h-2 rounded-full animate-ping bg-[#ef4444]"></div> Live
+                    <h3 className="text-xl font-extrabold text-[#064e3b]">Upcoming Drops</h3>
+                    <span className="px-3 py-1 text-xs font-black  tracking-wider flex items-center gap-1.5 rounded-full bg-[#fef2f2] text-[#e1b31d]">
+                        <div className="w-2 h-2 rounded-full animate-ping bg-[#efa544]"></div>Soon...
                     </span>
                 </div>
                 

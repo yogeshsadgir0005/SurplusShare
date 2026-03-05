@@ -320,7 +320,7 @@ const getNgoDashboardMetrics = async (req, res) => {
       }
     });
 
-    // 2. Fetch network Active posts AND our active claims (for the "Upcoming Pickups" Radar feed)
+// 2. Fetch network Active posts AND our active claims (for the "Upcoming Pickups" Radar feed)
     const activeNetworkPosts = await Post.find({
         $or: [
             { status: 'Active' },
@@ -341,51 +341,56 @@ const getNgoDashboardMetrics = async (req, res) => {
       // Hide if expired, UNLESS we hold an approved claim on it
       if (post.status === 'Expired' && (!myClaim || myClaim.status !== 'Approved')) return;
 
+      // --- STRICT FILTER: Only allow Scheduled posts to appear in Upcoming Drops ---
+      if (post.type !== 'Scheduled' || !post.scheduledDays || post.scheduledDays.length === 0) return;
+
       const isUrgent = post.shelfLife && post.shelfLife.toLowerCase().includes('hour');
-      let formattedTime = 'Schedule Pending';
-      let targetDayNum = -1;
+      
+      let formattedTime = 'Pending';
       let nextTimeStr = '23:59';
+      let daysToAdd = -1;
 
-      if (post.type === 'Scheduled' && post.scheduledDays && post.scheduledDays.length > 0) {
-        let minDaysDiff = 7;
-        post.scheduledDays.forEach(d => {
-            if (d.isActive) {
-                const dNum = dayMap[d.day];
-                if (dNum !== undefined) {
-                    let diff = (dNum - currentDayNum + 7) % 7;
-                    if (diff === 0 && d.deadlineTime && d.deadlineTime < currentTimeStr) diff = 7;
-                    
-                    if (diff < minDaysDiff) {
-                        minDaysDiff = diff;
-                        targetDayNum = dNum;
-                        nextTimeStr = d.deadlineTime || '23:59';
-                    }
-                }
-            }
-        });
-        
-        const activeDays = post.scheduledDays.filter(d => d.isActive).map(d => d.day.substring(0,3)).join(', ');
-        formattedTime = activeDays ? `${activeDays} ${nextTimeStr}`.trim() : 'Schedule Pending';
-        if (targetDayNum === -1) targetDayNum = new Date(post.updatedAt).getDay();
+      // Calculate absolute distance for Scheduled Posts
+      let minDaysDiff = 999;
+      let bestDay = null;
 
-      } else if (post.pickupDate) {
-        const dateObj = new Date(post.pickupDate);
-        if (!isNaN(dateObj.getTime())) {
-            targetDayNum = dateObj.getDay();
-            nextTimeStr = post.pickupTime || '23:59';
-            const dayOfWeek = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
-            formattedTime = `${dayOfWeek} ${post.pickupTime || ''}`.trim();
-        } else {
-            targetDayNum = new Date(post.updatedAt).getDay();
-            formattedTime = `${post.pickupDate} ${post.pickupTime || ''}`.trim();
-        }
-      } else {
-        targetDayNum = new Date(post.updatedAt).getDay();
+      post.scheduledDays.forEach(d => {
+          if (d.isActive) {
+              const dNum = dayMap[d.day];
+              if (dNum !== undefined) {
+                  let diff = (dNum - currentDayNum + 7) % 7;
+                  
+                  // If it's today but the time has already passed, it occurs next week (7 days away)
+                  if (diff === 0 && d.deadlineTime && d.deadlineTime < currentTimeStr) {
+                      diff = 7;
+                  }
+                  
+                  if (diff < minDaysDiff) {
+                      minDaysDiff = diff;
+                      nextTimeStr = d.deadlineTime || '23:59';
+                      daysToAdd = diff;
+                      bestDay = d.day;
+                  } else if (diff === minDaysDiff) {
+                      // Tie-breaker: if same day, pick the earlier time
+                      if (d.deadlineTime && d.deadlineTime < nextTimeStr) {
+                          nextTimeStr = d.deadlineTime;
+                          bestDay = d.day;
+                      }
+                  }
+              }
+          }
+      });
+      
+      if (bestDay) {
+          formattedTime = `${bestDay.substring(0,3)} ${nextTimeStr}`;
       }
 
-      const daysFromToday = (targetDayNum - currentDayNum + 7) % 7;
+      // Skip if no valid upcoming active day was found
+      if (daysToAdd === -1) return;
+
+      // Construct absolute sort date combining the offset days + the specific time
       const sortDate = new Date(now.getTime());
-      sortDate.setDate(now.getDate() + daysFromToday);
+      sortDate.setDate(now.getDate() + daysToAdd);
       const [hh, mm] = nextTimeStr.split(':');
       sortDate.setHours(parseInt(hh||23), parseInt(mm||59), 0, 0);
 
@@ -397,9 +402,12 @@ const getNgoDashboardMetrics = async (req, res) => {
         amount: `${post.weight} kg ${post.category}`,
         urgent: isUrgent,
         isRed: isUrgent || (myClaim && myClaim.status === 'Pending'),
-        rawDate: sortDate.getTime()
+        rawDate: sortDate.getTime() // The absolute timestamp for flawless sorting
       });
     });
+
+    // --- 3. FINAL CALCULATIONS ---
+
 
     // --- 3. FINAL CALCULATIONS ---
     const mealsProvided = Math.floor((savedKgs * 1000) / 400);
