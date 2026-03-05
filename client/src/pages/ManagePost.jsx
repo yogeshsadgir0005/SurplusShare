@@ -115,7 +115,7 @@ const ManagePost = () => {
     }
   };
 
-  const saveEdits = async () => {
+const saveEdits = async () => {
     setActionLocked(true);
 
     if (post.type === 'OneTime' && editForm.pickupDate && editForm.pickupTime) {
@@ -146,11 +146,22 @@ const ManagePost = () => {
          payload.append('image', imageFile);
       }
 
-      const { data } = await api.put(`/posts/${id}`, payload);
+      // --- ADDED EXPLICIT HEADERS HERE ---
+      const { data } = await api.put(`/posts/${id}`, payload, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
       
       setPost(data);
       setIsEditing(false);
       setImageFile(null); 
+      
+      // --- UPDATE THE IMAGE PREVIEW STATE ---
+      if (data.image) {
+        setImagePreview(`${API_BASE_URL}${data.image}`);
+      }
+      
       toast.success('Post Updated Successfully');
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to update post');
