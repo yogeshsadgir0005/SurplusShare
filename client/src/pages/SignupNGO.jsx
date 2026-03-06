@@ -42,7 +42,7 @@ const LocationPicker = ({ position, setPosition, lastAction }) => {
   return position ? <Marker position={position} icon={customIcon} draggable={true} eventHandlers={{ dragstart: () => { if(lastAction) lastAction.current = 'map'; }, dragend: (e) => setPosition(e.target.getLatLng()) }} /> : null;
 };
 
-// Sage Theme Constant Classes (To keep JSX clean)
+// Sage Theme Constant Classes
 const inputClasses = "w-full bg-[#f4f7f4] border-2 border-transparent rounded-full px-5 py-3.5 text-[15px] font-bold text-[#064e3b] outline-none focus:bg-white focus:border-[#10b981]/30 focus:ring-4 focus:ring-[#10b981]/10 transition-all placeholder:text-[#82a38e] shadow-inner shadow-black/[0.01]";
 const labelClasses = "block text-[12px] font-extrabold text-[#82a38e] uppercase tracking-wider pl-1 mb-1.5";
 
@@ -134,7 +134,11 @@ const SignupNGO = () => {
         }
       };
       const res = await api.post('/auth/register', payload);
+      
+      // CRITICAL FIX: Save token so subsequent requests are authorized
+      localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(res.data));
+      
       toast.success('NGO Account Created Successfully!');
       navigate('/ngo/dashboard');
     } catch (err) {
@@ -148,7 +152,11 @@ const SignupNGO = () => {
     setIsProcessing(true);
     try {
       const res = await api.post('/auth/google', { token: credentialResponse.credential, role: 'NGO' });
+      
+      // CRITICAL FIX: Save token so subsequent requests are authorized
+      localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(res.data));
+      
       toast.success('Successfully signed in with Google!');
       navigate('/ngo/dashboard');
     } catch (err) {

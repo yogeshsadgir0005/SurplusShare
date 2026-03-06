@@ -134,13 +134,13 @@ const ListingsNGO = () => {
             <p className="text-[15px] font-medium text-[#4a6b56] mt-1">Discover and claim available food donations in your operational area.</p>
           </div>
           
-                <div className="fade-in relative border-2 rounded-4xl border-[#064e3b]">
+                <div className="fade-in relative border-2 md:w-[400px] w-[350px] ml-[10px] rounded-4xl border-[#0f996b]">
                   <input 
                     type="text" 
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Name or location..." 
-                    className="w-full bg-[#f4f7f4] border-none rounded-full px-5 py-3.5 text-[14.5px] font-bold text-[#064e3b] outline-none focus:ring-4 focus:ring-[#10b981]/20 transition-all placeholder:text-[#82a38e]"
+                    className="w-full bg-[#f4f7f4] border-none rounded-full px-5 py-3.5 text-[14.5px] font-bold text-[#109166] outline-none focus:ring-4 focus:ring-[#10b981]/20 transition-all placeholder:text-[#82a38e]"
                   />
                   <svg className="absolute right-5 top-3.5 w-5 h-5 text-[#82a38e]" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
               </div>

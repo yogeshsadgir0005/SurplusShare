@@ -132,7 +132,11 @@ const SignupSupplier = () => {
         }
       };
       const res = await api.post('/auth/register', payload);
+      
+      // CRITICAL FIX: Save token so subsequent requests are authorized
+      localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(res.data));
+      
       toast.success('Supplier Hub Deployed Successfully!');
       navigate('/supplier/dashboard');
     } catch (err) {
@@ -146,7 +150,11 @@ const SignupSupplier = () => {
     setIsDeploying(true);
     try {
       const res = await api.post('/auth/google', { token: credentialResponse.credential, role: 'Supplier' });
+      
+      // CRITICAL FIX: Save token so subsequent requests are authorized
+      localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(res.data));
+      
       toast.success('Successfully authenticated via Google Workspace');
       navigate('/supplier/dashboard');
     } catch (err) {

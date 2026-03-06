@@ -122,8 +122,7 @@ const Navbar = () => {
         )}
       </header>
 
-      {/* Logic Exposer for Landing Page */}
-      <div id="smart-ctas" className="hidden" data-ngo={handleNgoClick} data-supplier={handleSupplierClick}></div>
+
 
       {/* Organic Alert Modal */}
       {showLogoutModal && (
