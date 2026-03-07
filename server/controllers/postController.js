@@ -95,22 +95,55 @@ const createPost = async (req, res) => {
 const getActivePosts = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
-    const posts = await Post.find({ status: 'Active' }).populate('supplierId', 'supplierDetails.legalName').lean();
+    
+    const posts = await Post.find({
+      $or: [
+        { status: 'Active' },
+        { type: 'Scheduled', status: 'Claimed' } 
+      ]
+    }).populate('supplierId', 'supplierDetails.legalName');
 
     const now = new Date();
     const currentDay = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long' }).format(now);
     const currentTime = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: false }).format(now);
 
-    const validPosts = posts.filter(p => {
-      if (p.type === 'OneTime') return true;
+    const validPosts = [];
+
+    for (let p of posts) {
+      if (p.type === 'OneTime') {
+        if (p.status === 'Active') validPosts.push(p);
+        continue;
+      }
+
       if (p.type === 'Scheduled') {
          const todaySchedule = p.scheduledDays?.find(d => d.day === currentDay && d.isActive);
-         if (!todaySchedule) return false;
-         if (currentTime >= todaySchedule.postTime && currentTime <= todaySchedule.deadlineTime) return true;
-         return false;
+         if (!todaySchedule) continue;
+
+         // Check if we are currently inside the broadcast window
+         if (currentTime >= todaySchedule.postTime && currentTime <= todaySchedule.deadlineTime) {
+            
+            if (p.status === 'Claimed') {
+               // Extract the timestamp from the latest claim's MongoDB ObjectId
+               const latestClaim = p.claims[p.claims.length - 1];
+               let claimedToday = false;
+               
+               if (latestClaim && latestClaim._id) {
+                  const claimDate = new Date(parseInt(latestClaim._id.toString().substring(0, 8), 16) * 1000);
+                  claimedToday = claimDate.toDateString() === now.toDateString();
+               }
+
+               // If it was claimed on a previous day/week, it's time to wake it up!
+               if (!claimedToday) {
+                  p.status = 'Active';
+                  await p.save();
+                  validPosts.push(p);
+               }
+            } else if (p.status === 'Active') {
+               validPosts.push(p);
+            }
+         }
       }
-      return false;
-    });
+    }
 
     const ngoLat = user.ngoDetails?.lat;
     const ngoLng = user.ngoDetails?.lng;
@@ -121,7 +154,9 @@ const getActivePosts = async (req, res) => {
     const postsWithDistance = validPosts.map(p => {
       let distance = null;
       if (ngoLat && ngoLng && p.lat && p.lng) distance = getDistanceFromLatLonInKm(ngoLat, ngoLng, p.lat, p.lng);
-      return { ...p, distance };
+      
+      // FIX: Convert the raw Mongoose document to a plain object so data isn't stripped!
+      return { ...p.toObject(), distance };
     });
 
     const sortedPosts = postsWithDistance.sort((a, b) => {
@@ -144,8 +179,38 @@ const getActivePosts = async (req, res) => {
 };
 
 const getSupplierPosts = async (req, res) => {
-  const posts = await Post.find({ supplierId: req.user._id }).sort({ createdAt: -1 });
-  res.json(posts);
+  try {
+    const posts = await Post.find({ supplierId: req.user._id }).sort({ createdAt: -1 });
+
+    const now = new Date();
+    const currentDay = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long' }).format(now);
+    const currentTime = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: false }).format(now);
+
+    for (let p of posts) {
+      if (p.type === 'Scheduled' && p.status === 'Claimed') {
+        const todaySchedule = p.scheduledDays?.find(d => d.day === currentDay && d.isActive);
+        
+        if (todaySchedule && currentTime >= todaySchedule.postTime && currentTime <= todaySchedule.deadlineTime) {
+           const latestClaim = p.claims[p.claims.length - 1];
+           let claimedToday = false;
+           
+           if (latestClaim && latestClaim._id) {
+              const claimDate = new Date(parseInt(latestClaim._id.toString().substring(0, 8), 16) * 1000);
+              claimedToday = claimDate.toDateString() === now.toDateString();
+           }
+           
+           if (!claimedToday) {
+              p.status = 'Active';
+              await p.save(); // Automatically resets to Active for the new week
+           }
+        }
+      }
+    }
+
+    res.json(posts);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
 
 const getPostById = async (req, res) => {
@@ -230,15 +295,23 @@ const claimPost = async (req, res) => {
 const manageClaim = async (req, res) => {
   const { claimId, status } = req.body;
   const post = await Post.findById(req.params.id);
+  
   if (post && post.supplierId.toString() === req.user._id.toString()) {
     const claim = post.claims.id(claimId);
     if (claim) {
       claim.status = status;
-      if (status === 'Approved') post.status = 'Claimed';
+      // Mark as Claimed so the UI updates correctly for the current week
+      if (status === 'Approved') {
+         post.status = 'Claimed'; 
+      }
       await post.save();
       res.json(post);
-    } else res.status(404).json({ message: 'Claim not found' });
-  } else res.status(403).json({ message: 'Unauthorized' });
+    } else {
+      res.status(404).json({ message: 'Claim not found' });
+    }
+  } else {
+    res.status(403).json({ message: 'Unauthorized' });
+  }
 };
 
 const getSupplierDashboardMetrics = async (req, res) => {

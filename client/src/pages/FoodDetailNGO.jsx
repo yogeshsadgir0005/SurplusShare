@@ -66,6 +66,27 @@ const FoodDetailNGO = () => {
     : encodeURIComponent(`${resource.pickupAddress}, ${resource.city}, ${distString}${resource.state}, India`);
   const claimCount = resource.claims ? resource.claims.length : 0;
 
+
+  const getScheduledDeadlineTime = (resource) => {
+  if (resource.type !== 'Scheduled' || !Array.isArray(resource.scheduledDays)) {
+    return resource.pickupTime || 'ASAP';
+  }
+
+  const todayName = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+
+  const todaySchedule = resource.scheduledDays.find(
+    (item) => item.day === todayName && item.isActive
+  );
+
+  return todaySchedule?.deadlineTime || 'ASAP';
+};
+
+const pickupDeadlineTime =
+  resource.type === 'Scheduled'
+    ? getScheduledDeadlineTime(resource)
+    : (resource.pickupTime || 'ASAP');
+
+
   return (
     <Layout role="NGO">
       <div className="max-w-[1400px] mx-auto space-y-6 lg:space-y-8 pb-10">
@@ -159,8 +180,8 @@ const FoodDetailNGO = () => {
               <div className="grid grid-cols-2 gap-6 sm:gap-8 mb-10">
                  {[
                    { label: "Fresh For", val: resource.shelfLife, icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" },
-                   { label: "Pickup Date DeadLine", val: resource.pickupDate   || "ASAP", icon: "M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-10.714A9.535 9.535 0 003 12c0 1.291.256 2.523.721 3.647" },
-               { label: "Pickup Time DeadLine", val: resource.pickupTime   || "ASAP", icon: "M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-10.714A9.535 9.535 0 003 12c0 1.291.256 2.523.721 3.647" },
+                   { label: "Pickup Date DeadLine", val: resource.pickupDate   || "TODAY", icon: "M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-10.714A9.535 9.535 0 003 12c0 1.291.256 2.523.721 3.647" },
+               { label: "Pickup Time DeadLine", val: resource.pickupTime   || pickupDeadlineTime, icon: "M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-10.714A9.535 9.535 0 003 12c0 1.291.256 2.523.721 3.647" },
         
                    { label: "Packaging", val: resource.packaging ? "YES" : "NO", icon: "M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" },
                            ].map((stat, i) => (

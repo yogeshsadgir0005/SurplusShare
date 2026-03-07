@@ -25,19 +25,31 @@ const HistorySupplier = () => {
 
   const filteredData = filter === 'All' ? posts : posts.filter(p => p.status === filter);
 
-  // Upgraded Organic Status Badge
-  const StatusBadge = ({ status }) => {
+const StatusBadge = ({ post }) => {
+    // FIX: Force display text to "Active Schedule" for scheduled posts
+    let displayStatus = post.status;
+    if (post.type === 'Scheduled' && post.status !== 'Expired') {
+       displayStatus = 'Active Schedule';
+    }
+
     let colorClass = "bg-[#f4f7f4] text-[#4a6b56]";
     let dotColor = "bg-[#82a38e]";
     
-    if (status === 'Active') { colorClass = "bg-[#ecfdf5] text-[#059669]"; dotColor = "bg-[#10b981]"; }
-    if (status === 'Claimed') { colorClass = "bg-[#eff6ff] text-[#2563eb]"; dotColor = "bg-[#3b82f6]"; }
-    if (status === 'Expired') { colorClass = "bg-[#f4f7f4] text-[#82a38e]"; dotColor = "bg-[#cbd5e1]"; }
+    if (displayStatus === 'Active' || displayStatus === 'Active Schedule') { 
+      colorClass = "bg-[#ecfdf5] text-[#059669]"; 
+      dotColor = "bg-[#10b981]"; 
+    } else if (displayStatus === 'Claimed') { 
+      colorClass = "bg-[#eff6ff] text-[#2563eb]"; 
+      dotColor = "bg-[#3b82f6]"; 
+    } else if (displayStatus === 'Expired') { 
+      colorClass = "bg-[#f4f7f4] text-[#82a38e]"; 
+      dotColor = "bg-[#cbd5e1]"; 
+    }
 
     return (
       <span className={`px-3 py-1.5 rounded-full text-[11px] font-extrabold uppercase tracking-wider flex items-center gap-1.5 w-max ${colorClass}`}>
         <div className={`w-1.5 h-1.5 rounded-full ${dotColor}`}></div>
-        {status}
+        {displayStatus}
       </span>
     );
   };
@@ -117,21 +129,41 @@ const HistorySupplier = () => {
                           {post.weight} <span className="text-[13px] font-bold text-[#82a38e]">kg</span>
                         </td>
                         <td className="px-6 py-5 whitespace-nowrap">
-                          <StatusBadge status={post.status} />
+<StatusBadge post={post} />
                         </td>
-                        <td className="px-6 py-5 whitespace-nowrap text-right pr-8">
-                           <button 
-                             onClick={() => navigate(`/supplier/manage/${post._id}`)} 
-                             className={`inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full text-[13px] font-extrabold transition-all duration-300 shadow-sm ${
-                               post.status === 'Active' 
-                                 ? 'bg-[#10b981] text-white hover:bg-[#059669] hover:-translate-y-0.5 shadow-[0_4px_14px_rgba(16,185,129,0.3)]' 
-                                 : 'bg-white text-[#064e3b] hover:bg-[#f4f7f4] border border-[#e8f0eb] hover:border-[#d1fae5]'
-                             }`}
-                           >
-                              <span>{post.status === 'Active' ? 'Manage' : 'View Details'}</span>
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
-                           </button>
-                        </td>
+                    <td className="px-6 py-5 whitespace-nowrap text-right pr-8">
+  {post.type === 'Scheduled' ? (
+    <div className="flex items-center justify-end gap-2">
+      {post.status === 'Claimed' && (
+        <button 
+          onClick={() => navigate(`/supplier/details/${post._id}`)} 
+          className="inline-flex items-center justify-center px-4 py-2 rounded-full text-[12px] font-extrabold transition-all duration-300 bg-white text-[#064e3b] hover:bg-[#f4f7f4] border border-[#e8f0eb] hover:border-[#d1fae5]"
+        >
+          View Details
+        </button>
+      )}
+      <button 
+        onClick={() => navigate(`/supplier/manage/${post._id}`)} 
+        className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-full text-[12px] font-extrabold transition-all duration-300 bg-[#10b981] text-white hover:bg-[#059669] shadow-[0_4px_14px_rgba(16,185,129,0.3)]"
+      >
+        <span>Manage Schedule</span>
+        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+  ) : (
+    <button 
+      onClick={() => navigate(`/supplier/manage/${post._id}`)} 
+      className={`inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full text-[13px] font-extrabold transition-all duration-300 shadow-sm ${
+        post.status === 'Active' 
+          ? 'bg-[#10b981] text-white hover:bg-[#059669] hover:-translate-y-0.5 shadow-[0_4px_14px_rgba(16,185,129,0.3)]' 
+          : 'bg-white text-[#064e3b] hover:bg-[#f4f7f4] border border-[#e8f0eb] hover:border-[#d1fae5]'
+      }`}
+    >
+      <span>{post.status === 'Active' ? 'Manage' : 'View Details'}</span>
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
+    </button>
+  )}
+</td>
                       </tr>
                     ))
                   ) : (

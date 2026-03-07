@@ -215,13 +215,15 @@ const saveEdits = async () => {
             <h1 className="text-[32px] font-extrabold text-[#064e3b] tracking-tight">{post.type === 'Scheduled' ? 'Manage Schedule' : 'Manage Drop'}</h1>
           </div>
           
-          <div className="flex flex-wrap items-center gap-3">
-            <div className={`px-4 py-2 rounded-full text-[12px] font-extrabold uppercase tracking-wider flex items-center gap-2 ${post.status === 'Active' ? 'bg-[#ecfdf5] text-[#059669]' : 'bg-[#f4f7f4] text-[#82a38e]'}`}>
-              {post.status === 'Active' && <span className="w-2 h-2 bg-[#10b981] rounded-full animate-ping"></span>}
-              {post.status}
+    <div className="flex flex-wrap items-center gap-3">
+            {/* FIX: Smart Badge that treats Scheduled posts as infinitely active */}
+            <div className={`px-4 py-2 rounded-full text-[12px] font-extrabold uppercase tracking-wider flex items-center gap-2 ${(post.status === 'Active' || post.type === 'Scheduled') ? 'bg-[#ecfdf5] text-[#059669]' : 'bg-[#f4f7f4] text-[#82a38e]'}`}>
+              {(post.status === 'Active' || post.type === 'Scheduled') && <span className="w-2 h-2 bg-[#10b981] rounded-full animate-ping"></span>}
+              {post.type === 'Scheduled' ? 'Active Schedule' : post.status}
             </div>
 
-            {post.status === 'Active' && !isEditing && (
+            {/* FIX: Unlock the Edit button for all Scheduled posts */}
+            {(post.status === 'Active' || post.type === 'Scheduled') && !isEditing && (
               <button onClick={() => setIsEditing(true)} className="px-6 py-2.5 bg-white border border-[#e8f0eb] text-[#064e3b] rounded-full text-[14.5px] font-bold hover:bg-[#f4f7f4] transition-colors shadow-sm">
                 Edit Details
               </button>

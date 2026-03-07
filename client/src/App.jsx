@@ -19,7 +19,7 @@ import FoodDetailNGO from './pages/FoodDetailNGO';
 import SettingsNGO from './pages/SettingsNGO';
 import ClaimsNGO from './pages/ClaimsNGO';
 import HistoryNGO from './pages/HistoryNGO';
-
+import SupplierDetails from './pages/SupplierDetails';
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID_HERE.apps.googleusercontent.com';
 
 const AuthRoute = ({ children }) => {
@@ -61,6 +61,7 @@ function App() {
             <Route path="/supplier/schedule" element={<ProtectedRoute allowedRole="Supplier"><ScheduleDonation /></ProtectedRoute>} />
             <Route path="/supplier/history" element={<ProtectedRoute allowedRole="Supplier"><HistorySupplier /></ProtectedRoute>} />
             <Route path="/supplier/manage/:id" element={<ProtectedRoute allowedRole="Supplier"><ManagePost /></ProtectedRoute>} />
+            <Route path="/supplier/details/:id" element={<ProtectedRoute allowedRole="Supplier"><SupplierDetails /></ProtectedRoute>} />
             <Route path="/supplier/settings" element={<ProtectedRoute allowedRole="Supplier"><SettingsSupplier /></ProtectedRoute>} />
 
             {/* NGO Routes */}
