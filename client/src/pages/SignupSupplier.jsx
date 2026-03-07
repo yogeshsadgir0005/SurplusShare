@@ -42,7 +42,6 @@ const LocationPicker = ({ position, setPosition, lastAction }) => {
   return position ? <Marker position={position} icon={customIcon} draggable={true} eventHandlers={{ dragstart: () => { if(lastAction) lastAction.current = 'map'; }, dragend: (e) => setPosition(e.target.getLatLng()) }} /> : null;
 };
 
-// Sage Theme Constant Classes
 const inputClasses = "w-full bg-[#f4f7f4] border-2 border-transparent rounded-full px-5 py-3.5 text-[15px] font-bold text-[#064e3b] outline-none focus:bg-white focus:border-[#10b981]/30 focus:ring-4 focus:ring-[#10b981]/10 transition-all placeholder:text-[#82a38e] shadow-inner shadow-black/[0.01]";
 const labelClasses = "block text-[12px] font-extrabold text-[#82a38e] uppercase tracking-wider pl-1 mb-1.5";
 
@@ -51,6 +50,7 @@ const SignupSupplier = () => {
   const [activeStage, setActiveStage] = useState(1);
   const [isDeploying, setIsDeploying] = useState(false);
   const [mapPosition, setMapPosition] = useState(null);
+  const [googleToken, setGoogleToken] = useState(null);
   const lastAction = useRef('init');
 
   const [showOTPModal, setShowOTPModal] = useState(false);
@@ -104,8 +104,63 @@ const SignupSupplier = () => {
     }
   };
 
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setIsDeploying(true);
+    try {
+      const token = credentialResponse.credential;
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const payload = JSON.parse(window.atob(base64));
+
+      try {
+        await api.post('/auth/check-email', { email: payload.email });
+        setGoogleToken(token);
+        setFormState(prev => ({ ...prev, email: payload.email, legalName: payload.name || prev.legalName }));
+        toast.success("Google linked! Please define operations profile.");
+        setActiveStage(2);
+      } catch (err) {
+        const res = await api.post('/auth/google', { token, role: 'Supplier' });
+        localStorage.setItem('token', res.data.token);
+        localStorage.setItem('user', JSON.stringify(res.data));
+        toast.success('Successfully authenticated via Google Workspace');
+        navigate('/supplier/dashboard');
+      }
+    } catch (err) {
+      toast.error('Authentication sequence failed');
+    } finally {
+      setIsDeploying(false);
+    }
+  };
+
   const requestOTPAndSubmit = async (e) => {
     e.preventDefault();
+    
+    if (googleToken) {
+       setIsDeploying(true);
+       try {
+          const payload = {
+             token: googleToken,
+             role: 'Supplier',
+             details: {
+               businessType: formState.businessType, legalName: formState.legalName, website: formState.website,
+               contactNumber: formState.contactNumber, address: formState.address, city: formState.city, 
+               district: formState.district, state: formState.state,
+               lat: mapPosition?.lat, lng: mapPosition?.lng 
+             }
+          };
+          const res = await api.post('/auth/google', payload);
+          localStorage.setItem('token', res.data.token);
+          localStorage.setItem('user', JSON.stringify(res.data));
+          toast.success('Supplier Hub Deployed Successfully!');
+          navigate('/supplier/dashboard');
+       } catch(err) {
+          toast.error(err.response?.data?.message || 'Google Registration failed');
+       } finally {
+          setIsDeploying(false);
+       }
+       return;
+    }
+
     setIsDeploying(true);
     try {
        await api.post('/auth/send-otp', { email: formState.email });
@@ -132,8 +187,6 @@ const SignupSupplier = () => {
         }
       };
       const res = await api.post('/auth/register', payload);
-      
-      // CRITICAL FIX: Save token so subsequent requests are authorized
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(res.data));
       
@@ -141,24 +194,6 @@ const SignupSupplier = () => {
       navigate('/supplier/dashboard');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Registration failed');
-    } finally {
-      setIsDeploying(false);
-    }
-  };
-
-  const handleGoogleSuccess = async (credentialResponse) => {
-    setIsDeploying(true);
-    try {
-      const res = await api.post('/auth/google', { token: credentialResponse.credential, role: 'Supplier' });
-      
-      // CRITICAL FIX: Save token so subsequent requests are authorized
-      localStorage.setItem('token', res.data.token);
-      localStorage.setItem('user', JSON.stringify(res.data));
-      
-      toast.success('Successfully authenticated via Google Workspace');
-      navigate('/supplier/dashboard');
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Authentication sequence failed');
     } finally {
       setIsDeploying(false);
     }
@@ -237,7 +272,6 @@ const SignupSupplier = () => {
                       text="signup_with"
                       shape="rectangular"
                       size="large"
-                      width="100%"
                   />
               </div>
             </div>
@@ -247,6 +281,8 @@ const SignupSupplier = () => {
               <p className="text-[14.5px] font-medium text-[#4a6b56] mb-8">Define your supply chain parameters.</p>
               
               <form onSubmit={requestOTPAndSubmit} className="space-y-5">
+                
+                {/* --- ADDED: Contact Mobile and Website --- */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div>
                     <label className={labelClasses}>Entity Type</label>
@@ -260,6 +296,14 @@ const SignupSupplier = () => {
                   <div>
                     <label className={labelClasses}>Legal Entity Name</label>
                     <input type="text" name="legalName" required value={formState.legalName} onChange={syncInput} placeholder="Fresh Foods LLC" className={inputClasses}/>
+                  </div>
+                  <div>
+                    <label className={labelClasses}>Contact Mobile</label>
+                    <input type="tel" name="contactNumber" required value={formState.contactNumber} onChange={syncInput} placeholder="+91 98765 43210" className={inputClasses}/>
+                  </div>
+                  <div>
+                    <label className={labelClasses}>Website (Optional)</label>
+                    <input type="url" name="website" value={formState.website} onChange={syncInput} placeholder="https://company.com" className={inputClasses}/>
                   </div>
                 </div>
 
@@ -310,7 +354,7 @@ const SignupSupplier = () => {
                     Back
                   </button>
                   <button type="submit" disabled={isDeploying} className={`w-2/3 py-4 rounded-full text-[15px] font-extrabold shadow-[0_4px_14px_rgba(16,185,129,0.3)] transition-all duration-300 flex items-center justify-center gap-2 ${isDeploying ? 'bg-[#10b981]/70 text-white cursor-not-allowed' : 'bg-[#10b981] text-white hover:bg-[#059669] hover:-translate-y-0.5'}`}>
-                    {isDeploying ? <div className="w-5 h-5 border-[3px] border-white/30 border-t-white rounded-full animate-spin"></div> : 'Send Verification OTP'}
+                    {isDeploying ? <div className="w-5 h-5 border-[3px] border-white/30 border-t-white rounded-full animate-spin"></div> : (googleToken ? 'Complete Registration' : 'Send Verification OTP')}
                   </button>
                </div>
               </form>

@@ -42,7 +42,6 @@ const LocationPicker = ({ position, setPosition, lastAction }) => {
   return position ? <Marker position={position} icon={customIcon} draggable={true} eventHandlers={{ dragstart: () => { if(lastAction) lastAction.current = 'map'; }, dragend: (e) => setPosition(e.target.getLatLng()) }} /> : null;
 };
 
-// Sage Theme Constant Classes
 const inputClasses = "w-full bg-[#f4f7f4] border-2 border-transparent rounded-full px-5 py-3.5 text-[15px] font-bold text-[#064e3b] outline-none focus:bg-white focus:border-[#10b981]/30 focus:ring-4 focus:ring-[#10b981]/10 transition-all placeholder:text-[#82a38e] shadow-inner shadow-black/[0.01]";
 const labelClasses = "block text-[12px] font-extrabold text-[#82a38e] uppercase tracking-wider pl-1 mb-1.5";
 
@@ -51,6 +50,7 @@ const SignupNGO = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
   const [mapPosition, setMapPosition] = useState(null);
+  const [googleToken, setGoogleToken] = useState(null); // <-- NEW: Stores token during 2-step process
   const lastAction = useRef('init');
 
   const [showOTPModal, setShowOTPModal] = useState(false);
@@ -106,8 +106,74 @@ const SignupNGO = () => {
     }
   };
 
+  // --- NEW: 2-Step Google Handler ---
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setIsProcessing(true);
+    try {
+      const token = credentialResponse.credential;
+      // Decode the JWT to get the user's email
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const payload = JSON.parse(window.atob(base64));
+      
+      try {
+        // Check if email already exists in DB
+        await api.post('/auth/check-email', { email: payload.email });
+        
+        // If it succeeds (200 OK), they are a NEW user! 
+        // Pause and push to Step 2 to gather details
+        setGoogleToken(token);
+        setFormState(prev => ({ ...prev, email: payload.email, name: payload.name || prev.name }));
+        toast.success("Google linked! Please provide organization details.");
+        setCurrentStep(2);
+      } catch (err) {
+        // If it fails (400), the email EXISTS! 
+        // Proceed with login immediately
+        const res = await api.post('/auth/google', { token, role: 'NGO' });
+        localStorage.setItem('token', res.data.token);
+        localStorage.setItem('user', JSON.stringify(res.data));
+        toast.success('Successfully signed in with Google!');
+        navigate('/ngo/dashboard');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Google Auth processing failed');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // --- UPDATED: Route Google Signups straight to DB, Email Signups to OTP ---
   const requestOTPAndSubmit = async (e) => {
     e.preventDefault();
+    
+    // If we have a Google Token, skip OTP and finalize registration directly!
+    if (googleToken) {
+       setIsProcessing(true);
+       try {
+          const payload = {
+             token: googleToken,
+             role: 'NGO',
+             details: {
+               name: formState.name, mission: formState.mission, website: formState.website,
+               mobile: formState.mobile, address: formState.address, city: formState.city, 
+               district: formState.district, state: formState.state,
+               lat: mapPosition?.lat, lng: mapPosition?.lng 
+             }
+          };
+          const res = await api.post('/auth/google', payload);
+          localStorage.setItem('token', res.data.token);
+          localStorage.setItem('user', JSON.stringify(res.data));
+          toast.success('NGO Account Created Successfully!');
+          navigate('/ngo/dashboard');
+       } catch(err) {
+          toast.error(err.response?.data?.message || 'Google Registration failed');
+       } finally {
+          setIsProcessing(false);
+       }
+       return;
+    }
+
+    // Normal Email/Password Flow: Send OTP
     setIsProcessing(true);
     try {
        await api.post('/auth/send-otp', { email: formState.email });
@@ -134,8 +200,6 @@ const SignupNGO = () => {
         }
       };
       const res = await api.post('/auth/register', payload);
-      
-      // CRITICAL FIX: Save token so subsequent requests are authorized
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(res.data));
       
@@ -143,24 +207,6 @@ const SignupNGO = () => {
       navigate('/ngo/dashboard');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Registration failed');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleGoogleSuccess = async (credentialResponse) => {
-    setIsProcessing(true);
-    try {
-      const res = await api.post('/auth/google', { token: credentialResponse.credential, role: 'NGO' });
-      
-      // CRITICAL FIX: Save token so subsequent requests are authorized
-      localStorage.setItem('token', res.data.token);
-      localStorage.setItem('user', JSON.stringify(res.data));
-      
-      toast.success('Successfully signed in with Google!');
-      navigate('/ngo/dashboard');
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Google Auth failed');
     } finally {
       setIsProcessing(false);
     }
@@ -239,7 +285,6 @@ const SignupNGO = () => {
                       text="signup_with"
                       shape="rectangular"
                       size="large"
-                      width="100%"
                   />
               </div>
             </div>
@@ -312,7 +357,7 @@ const SignupNGO = () => {
                     Back
                   </button>
                   <button type="submit" disabled={isProcessing} className={`w-2/3 py-4 rounded-full text-[15px] font-extrabold shadow-[0_4px_14px_rgba(16,185,129,0.3)] transition-all duration-300 flex items-center justify-center gap-2 ${isProcessing ? 'bg-[#10b981]/70 text-white cursor-not-allowed' : 'bg-[#10b981] text-white hover:bg-[#059669] hover:-translate-y-0.5'}`}>
-                    {isProcessing ? <div className="w-5 h-5 border-[3px] border-white/30 border-t-white rounded-full animate-spin"></div> : 'Send Verification OTP'}
+                    {isProcessing ? <div className="w-5 h-5 border-[3px] border-white/30 border-t-white rounded-full animate-spin"></div> : (googleToken ? 'Complete Registration' : 'Send Verification OTP')}
                   </button>
                 </div>
               </form>
