@@ -212,7 +212,7 @@ const ListingsNGO = () => {
                     <div className="bg-[#f4f7f4] rounded-[1.5rem] p-4 border border-[#e8f0eb]">
                        <span className="block text-[11px] font-extrabold text-[#82a38e] uppercase tracking-wider mb-1">Packaging</span>
                        <span className={`text-[15px] font-black ${post.packaging ? 'text-[#059669]' : 'text-[#d97706]'}`}>
-                          {post.packaging ? 'Packaged' : 'Bulk Cargo'}
+                          {post.packaging ? 'YES' : 'NO'}
                        </span>
                     </div>
                   </div>
